@@ -6,7 +6,7 @@ from financial_system.config import (
     OUTPUT_DIR,
     ensure_directories,
     load_settings,
-    load_trend_keywords,
+    load_trend_monitors,
     read_symbols,
 )
 from financial_system.database import (
@@ -16,12 +16,13 @@ from financial_system.database import (
     save_notes,
     save_keyword_scores,
     load_historical_keyword_scores,
+    load_related_reports,
+    save_daily_report,
 )
 from financial_system.dates import today_string
 from financial_system.keywords import (
     build_keyword_queries,
     build_policy_queries,
-    build_trend_queries,
     blend_keywords,
     rank_keywords,
 )
@@ -30,6 +31,40 @@ from financial_system.market import fetch_market_snapshots, save_market_snapshot
 from financial_system.news import collect_news, save_news
 from financial_system.notes import read_notes
 from financial_system.report import render_report, save_report
+from financial_system.trend_monitor import (
+    build_long_term_trend_queries,
+    evaluate_long_term_trends,
+)
+
+
+def _score_terms(terms: list[str], score: float) -> dict[str, float]:
+    return {term: score for term in terms if term}
+
+
+def _build_report_keyword_scores(
+    current_scores: list[tuple[str, float]],
+    primary_keywords: list[str],
+    secondary_keywords: list[str],
+    long_term_trend_queries: list[str],
+    policy_queries: list[str],
+    movers: list,
+) -> dict[str, float]:
+    scores: dict[str, float] = {}
+    for term, score in current_scores:
+        scores[term] = scores.get(term, 0.0) + float(score)
+    for term, score in _score_terms(primary_keywords, 2.0).items():
+        scores[term] = scores.get(term, 0.0) + score
+    for term, score in _score_terms(secondary_keywords, 1.25).items():
+        scores[term] = scores.get(term, 0.0) + score
+    for query, score in _score_terms(long_term_trend_queries, 1.5).items():
+        scores[query] = scores.get(query, 0.0) + score
+    for query, score in _score_terms(policy_queries, 1.2).items():
+        scores[query] = scores.get(query, 0.0) + score
+    for mover in movers:
+        move_score = abs(mover.daily_change_pct or 0) or 1.0
+        scores[mover.symbol] = scores.get(mover.symbol, 0.0) + move_score
+        scores[mover.name.lower()] = scores.get(mover.name.lower(), 0.0) + move_score
+    return scores
 
 
 def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str, str]:
@@ -60,15 +95,33 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
 
     keyword_queries = build_keyword_queries(primary_keywords, max_queries=settings.keyword_query_limit)
     secondary_queries = build_keyword_queries(secondary_keywords, max_queries=settings.keyword_secondary_limit)
-    trend_config = load_trend_keywords()
-    trend_queries = build_trend_queries(trend_config, max_queries=settings.trend_query_limit)
+    trend_config = load_trend_monitors()
+    long_term_alerts = evaluate_long_term_trends(trend_config, snapshots)
+    long_term_trend_queries = build_long_term_trend_queries(
+        long_term_alerts,
+        max_queries=settings.long_term_trend_query_limit,
+    )
     policy_queries = build_policy_queries(
         snapshots,
         policy_limit=settings.policy_query_limit,
         company_limit=settings.policy_company_query_limit,
     )
     anomaly_queries = build_anomaly_queries(movers)
-    queries = anomaly_queries + trend_queries + keyword_queries + secondary_queries + policy_queries
+    queries = anomaly_queries + keyword_queries + secondary_queries + policy_queries + long_term_trend_queries
+    report_keyword_scores = _build_report_keyword_scores(
+        current_scores=current_scores,
+        primary_keywords=primary_keywords,
+        secondary_keywords=secondary_keywords,
+        long_term_trend_queries=long_term_trend_queries,
+        policy_queries=policy_queries,
+        movers=movers,
+    )
+    related_reports = load_related_reports(
+        report_keyword_scores,
+        min_reports=settings.report_context_min,
+        lookback_days=settings.report_context_lookback_days,
+        exclude_days={day},
+    )
     news_items = collect_news(
         queries,
         limit_per_query=4,
@@ -96,6 +149,8 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
             snapshots=snapshots,
             movers=movers,
             news_items=news_items,
+            related_reports=related_reports,
+            long_term_alerts=long_term_alerts,
         )
 
     report = render_report(
@@ -107,6 +162,12 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         ai_report=ai_report,
     )
     save_report(report_path, report)
+    save_daily_report(
+        day=day,
+        report_markdown=report,
+        ai_report=ai_report,
+        keyword_scores=report_keyword_scores,
+    )
 
     return {
         "report": str(report_path),

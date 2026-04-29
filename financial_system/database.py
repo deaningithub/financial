@@ -44,6 +44,15 @@ CREATE_TABLES_SQL = [
         PRIMARY KEY(day, term)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS daily_reports (
+        day TEXT PRIMARY KEY,
+        report_markdown TEXT NOT NULL,
+        ai_report TEXT,
+        keyword_scores_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """,
 ]
 
 
@@ -154,3 +163,100 @@ def load_historical_keyword_scores(
             continue
         aggregated[row["term"]] = aggregated.get(row["term"], 0.0) + weighted_score
     return aggregated
+
+
+def save_daily_report(
+    day: str,
+    report_markdown: str,
+    ai_report: str | None,
+    keyword_scores: dict[str, float],
+) -> None:
+    with _connect() as connection:
+        connection.execute(
+            """
+            INSERT OR REPLACE INTO daily_reports
+                (day, report_markdown, ai_report, keyword_scores_json, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                day,
+                report_markdown,
+                ai_report,
+                json.dumps(keyword_scores, ensure_ascii=False, sort_keys=True),
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+        connection.commit()
+
+
+def load_related_reports(
+    keyword_scores: dict[str, float],
+    min_reports: int = 3,
+    lookback_days: int = 45,
+    exclude_days: set[str] | None = None,
+) -> list[dict]:
+    exclude_days = exclude_days or set()
+    cutoff = datetime.utcnow().date() - timedelta(days=lookback_days)
+    with _connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT day, report_markdown, ai_report, keyword_scores_json, created_at
+            FROM daily_reports
+            ORDER BY day DESC
+            """
+        ).fetchall()
+
+    candidates: list[dict] = []
+    current_terms = {term: float(score) for term, score in keyword_scores.items() if score > 0}
+    for row in rows:
+        day = row["day"]
+        if day in exclude_days:
+            continue
+        try:
+            day_date = datetime.strptime(day, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if day_date < cutoff:
+            continue
+        try:
+            historical_terms = json.loads(row["keyword_scores_json"])
+        except json.JSONDecodeError:
+            historical_terms = {}
+
+        relevance = 0.0
+        matched_terms: list[str] = []
+        for term, current_score in current_terms.items():
+            historical_score = float(historical_terms.get(term, 0) or 0)
+            if historical_score <= 0:
+                continue
+            relevance += current_score * historical_score
+            matched_terms.append(term)
+
+        candidates.append(
+            {
+                "day": day,
+                "report_markdown": row["report_markdown"],
+                "ai_report": row["ai_report"],
+                "keyword_scores": historical_terms,
+                "relevance": relevance,
+                "matched_terms": matched_terms,
+                "created_at": row["created_at"],
+            }
+        )
+
+    ranked = sorted(
+        candidates,
+        key=lambda item: (item["relevance"], item["day"]),
+        reverse=True,
+    )
+    selected = [item for item in ranked if item["relevance"] > 0][:min_reports]
+    if len(selected) < min_reports:
+        selected_days = {item["day"] for item in selected}
+        for item in ranked:
+            if item["day"] in selected_days:
+                continue
+            selected.append(item)
+            selected_days.add(item["day"])
+            if len(selected) >= min_reports:
+                break
+    return selected

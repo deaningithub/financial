@@ -1,38 +1,38 @@
 {
-  "AI 晶片": [
-    "AI 晶片",
-    "GPU 供應鏈",
-    "HBM 記憶體",
-    "先進封裝",
+  "AI chips": [
+    "AI chips",
+    "GPU supply chain",
+    "HBM memory",
+    "advanced packaging",
     "CoWoS",
-    "資料中心資本支出"
+    "data center capex"
   ],
-  "衛星通訊": [
-    "衛星通訊",
-    "低軌衛星",
+  "satellite communications": [
+    "satellite communications",
+    "low earth orbit satellites",
     "Starlink",
-    "衛星供應鏈",
-    "太空網路"
+    "satellite supply chain",
+    "space internet"
   ],
-  "機器人與自動化": [
-    "人形機器人",
-    "工業機器人",
-    "自動化設備",
-    "伺服馬達",
-    "邊緣 AI"
+  "robotics and automation": [
+    "humanoid robots",
+    "industrial robots",
+    "automation equipment",
+    "servo motors",
+    "edge AI"
   ],
-  "車用科技": [
-    "電動車",
-    "自動駕駛",
-    "車用半導體",
-    "充電基礎建設",
-    "電池供應鏈"
+  "vehicle technology": [
+    "electric vehicles",
+    "autonomous driving",
+    "automotive semiconductors",
+    "charging infrastructure",
+    "battery supply chain"
   ],
-  "太空探索與登月": [
-    "登月計畫",
-    "月球基地",
-    "太空探索",
-    "火箭發射",
-    "航太供應鏈"
+  "space exploration and moon landing": [
+    "moon landing program",
+    "lunar base",
+    "space exploration",
+    "rocket launch",
+    "aerospace supply chain"
   ]
 }

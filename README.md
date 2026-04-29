@@ -32,6 +32,34 @@ Optional:
 OPENAI_MODEL=gpt-5.5
 ```
 
+## GitHub Codespaces
+
+This repo includes a Codespaces dev container in `.devcontainer/devcontainer.json`.
+
+1. Push this project to GitHub.
+2. Open the repo on GitHub.
+3. Choose `Code` -> `Codespaces` -> `Create codespace on main`.
+4. Add your API key as a Codespaces secret named `OPENAI_API_KEY`.
+5. In the Codespace terminal, run:
+
+```bash
+python main.py symbols
+python main.py run
+```
+
+For a smoke test without OpenAI:
+
+```bash
+python main.py run --no-ai
+```
+
+Generated files are intentionally ignored:
+
+- `data/financial_data.db`
+- `data/market_snapshots/*.json`
+- `data/news/*.json`
+- `outputs/*.md`
+
 ## Daily Run
 
 Add your human news notes:
@@ -52,7 +80,8 @@ Output appears in:
 - `data/market_snapshots/YYYY-MM-DD.json`
 - `data/news/YYYY-MM-DD.json`
 
-The news search includes market anomalies, your weighted notes, historical secondary keywords, and political/company policy keywords.
+The news search includes market anomalies, your weighted notes, historical secondary keywords, and political/company policy keywords. Long-term theme searches are only added when a monitored long-term trend crosses an attention threshold.
+Each generated daily report is also saved into SQLite. Future reports use weighted keyword similarity to load at least three related historical reports as context, falling back to recent reports only when related matches are unavailable.
 
 ## Useful Commands
 
@@ -78,6 +107,7 @@ python main.py run --no-ai
 
 Edit `config/symbols.json` to track the financial numbers you care about.
 Edit `config/policy_keywords.json` to track political policy or company policy terms that can affect stocks.
+Edit `config/trend_monitors.json` to track long-term themes such as AI chips, satellite communications, robotics/vehicles, and space exploration. These themes are monitored daily but only promoted into the report when their tracked symbols move enough.
 
 The default list includes:
 
@@ -97,6 +127,9 @@ Policy search settings:
 
 - `POLICY_QUERY_LIMIT=8`
 - `POLICY_COMPANY_QUERY_LIMIT=8`
+- `REPORT_CONTEXT_MIN=3`
+- `REPORT_CONTEXT_LOOKBACK_DAYS=45`
+- `LONG_TERM_TREND_QUERY_LIMIT=6`
 
 ## Notes
 

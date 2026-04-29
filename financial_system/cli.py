@@ -3,11 +3,11 @@ from __future__ import annotations
 import argparse
 from types import SimpleNamespace
 
-from financial_system.config import DATA_DIR, ensure_directories, load_trend_keywords, read_symbols, write_symbols
+from financial_system.config import DATA_DIR, ensure_directories, load_trend_monitors, read_symbols, write_symbols
 from financial_system.dates import today_string
 from financial_system.config import load_settings
 from financial_system.database import init_db, load_historical_keyword_scores
-from financial_system.keywords import build_keyword_queries, build_policy_queries, build_trend_queries, blend_keywords, rank_keywords
+from financial_system.keywords import build_keyword_queries, build_policy_queries, blend_keywords, rank_keywords
 from financial_system.notes import append_note
 from financial_system.notes import read_notes
 
@@ -81,10 +81,7 @@ def _cmd_inspect_keywords(args: argparse.Namespace) -> None:
         policy_limit=args.policy_limit or settings.policy_query_limit,
         company_limit=args.policy_company_limit or settings.policy_company_query_limit,
     )
-    trend_queries = build_trend_queries(
-        load_trend_keywords(),
-        max_queries=args.trend_limit or settings.trend_query_limit,
-    )
+    trend_monitors = load_trend_monitors()
 
     print(f"Keyword source date: {day}")
     if not ranked:
@@ -111,10 +108,16 @@ def _cmd_inspect_keywords(args: argparse.Namespace) -> None:
         for query in policy_queries:
             print(f"- {query}")
 
-    if trend_queries:
-        print("Trend search queries:")
-        for query in trend_queries:
-            print(f"- {query}")
+    if trend_monitors:
+        print("Long-term trend monitors:")
+        for trend, config in trend_monitors.items():
+            symbols = ", ".join(config.get("symbols", []))
+            print(
+                f"- {trend}: symbols={symbols}; "
+                f"daily>={config.get('daily_threshold_pct')}%, "
+                f"5d>={config.get('five_day_threshold_pct')}%, "
+                f"1m>={config.get('one_month_threshold_pct')}%"
+            )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -149,7 +152,6 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_keywords.add_argument("--secondary-limit", type=int)
     inspect_keywords.add_argument("--policy-limit", type=int)
     inspect_keywords.add_argument("--policy-company-limit", type=int)
-    inspect_keywords.add_argument("--trend-limit", type=int)
     inspect_keywords.set_defaults(func=_cmd_inspect_keywords)
 
     return parser

@@ -4,19 +4,24 @@ from openai import OpenAI
 
 from financial_system.market import MarketSnapshot
 from financial_system.news import NewsItem
+from financial_system.trend_monitor import TrendAlert, format_trend_alerts
 
 
-SYSTEM_PROMPT = """你是一位金融情報分析師，服務對象是台灣投資者。
+SYSTEM_PROMPT = """You are a financial intelligence analyst.
 
-請根據提供的市場數據、使用者筆記與新聞連結，產出每日市場摘要與風險評估。
+Create a grounded daily market brief from the provided market data, user notes, news links, related historical reports, and long-term trend monitor status.
 
-規則：
-- 全文使用繁體中文，語氣專業、清楚，貼近台灣投資者。
-- 不要自行編造因果關係。若原因只來自新聞標題，請標示為「可能驅動因素」。
-- 清楚區分事實、解讀與風險評估。
-- 同時納入上行風險與下行風險。
-- 保持精簡，但要足以支援投資者隔日追蹤。
-- 這不是投資建議。
+Rules:
+- Write the entire report in English.
+- Do not invent causes. If a cause is only suggested by headlines, label it as a likely driver.
+- Separate facts, interpretation, and risk assessment.
+- Use related historical reports as context, but do not treat old information as today's fact.
+- Clearly identify whether today's market action continues or reverses themes from related historical reports.
+- Make the daily report primarily about short-term international political and economic conditions.
+- Treat long-term themes as monitored background. Discuss them in detail only when a monitor alert is provided.
+- Include both upside and downside risks.
+- Keep the report concise, practical, and useful for a human investor.
+- This is not financial advice.
 """
 
 
@@ -39,6 +44,24 @@ def _news_lines(news_items: list[NewsItem]) -> str:
     )
 
 
+def _historical_report_lines(related_reports: list[dict]) -> str:
+    if not related_reports:
+        return "No related historical reports available."
+
+    blocks = []
+    for report in related_reports:
+        ai_report = report.get("ai_report") or report.get("report_markdown") or ""
+        excerpt = ai_report.strip().replace("\r\n", "\n")[:2200]
+        matched_terms = ", ".join(report.get("matched_terms") or [])
+        blocks.append(
+            f"Date: {report.get('day')}\n"
+            f"Relevance score: {report.get('relevance', 0):.2f}\n"
+            f"Matched keywords: {matched_terms or 'fallback recent report'}\n"
+            f"Report excerpt:\n{excerpt}"
+        )
+    return "\n\n---\n\n".join(blocks)
+
+
 def create_ai_report(
     api_key: str,
     model: str,
@@ -47,6 +70,8 @@ def create_ai_report(
     snapshots: list[MarketSnapshot],
     movers: list[MarketSnapshot],
     news_items: list[NewsItem],
+    related_reports: list[dict] | None = None,
+    long_term_alerts: list[TrendAlert] | None = None,
 ) -> str:
     client = OpenAI(api_key=api_key)
     mover_names = ", ".join(
@@ -68,23 +93,40 @@ Biggest movers:
 Collected news:
 {_news_lines(news_items) or "No news collected."}
 
-請用繁體中文回答，並使用台灣投資者熟悉的表達方式。
+Related historical reports selected by weighted keyword relevance:
+{_historical_report_lines(related_reports or [])}
 
-請在解讀中固定納入以下「全球趨勢框架」，但只有在資料或新聞有支持時才做具體判斷：
-- AI 晶片：GPU、HBM、先進封裝、資料中心資本支出、台積電與相關供應鏈。
-- 衛星通訊：低軌衛星、衛星網路、地面設備、航太供應鏈。
-- 機器人與車用科技：人形機器人、工業自動化、電動車、自動駕駛、車用半導體。
-- 太空探索與登月：登月計畫、火箭發射、太空基礎建設、航太材料與零組件。
+Long-term trend monitor status:
+{format_trend_alerts(long_term_alerts or [])}
 
-請用以下章節產出每日金融摘要與風險評估：
-1. 執行摘要
-2. 最大波動與可能驅動因素
-3. 台股市場狀態
-4. 全球趨勢觀察
-5. 政治與公司政策觀察
-6. 趨勢追蹤
-7. 風險評估
-8. 下一步觀察清單
+Write in English.
+
+Use the related historical reports first to establish context:
+- Which themes are continuing?
+- Which themes are reversing?
+- Which old risks still matter today?
+- Reference at least 3 historical reports when the system provides them. If fewer than 3 are available, state that the database has insufficient historical reports.
+
+The daily report should focus on short-term international political and economic conditions: rates, inflation, oil, currencies, geopolitics, policy changes, earnings, and cross-market risk appetite.
+
+The following long-term framework should be treated as a monitoring layer, not the main report theme:
+- AI chips: GPU, HBM, advanced packaging, data center capex, TSMC, and related supply chains.
+- Satellite communications: low earth orbit satellites, satellite internet, ground equipment, and aerospace supply chains.
+- Robotics and vehicle technology: humanoid robots, industrial automation, electric vehicles, autonomous driving, and automotive semiconductors.
+- Space exploration and moon landing: moon programs, rocket launches, space infrastructure, aerospace materials, and components.
+
+Only discuss a long-term trend in detail if the long-term trend monitor status shows an alert or if today's news has a direct market-moving catalyst. Otherwise, summarize it briefly as "no major threshold event today."
+
+Write the daily financial summary and risk assessment with these sections:
+1. Executive summary
+2. Historical context and continuation/reversal
+3. Biggest moves and likely drivers
+4. Taiwan market status
+5. Short-term political and economic situation
+6. Political and company policy watch
+7. Long-term trend monitor status
+8. Risk assessment
+9. What to monitor next
 """
     response = client.responses.create(
         model=model,

@@ -1,0 +1,37 @@
+{
+  "AI chips": {
+    "keywords": ["AI chips", "GPU supply chain", "HBM memory", "advanced packaging", "CoWoS", "data center capex"],
+    "symbols": ["NVDA", "MSFT", "2330.TW", "2454.TW", "0050.TW"],
+    "daily_threshold_pct": 2.0,
+    "five_day_threshold_pct": 6.0,
+    "one_month_threshold_pct": 15.0
+  },
+  "satellite communications": {
+    "keywords": ["satellite communications", "low earth orbit satellites", "Starlink", "satellite supply chain", "space internet"],
+    "symbols": ["TSLA"],
+    "daily_threshold_pct": 2.5,
+    "five_day_threshold_pct": 8.0,
+    "one_month_threshold_pct": 18.0
+  },
+  "robotics and automation": {
+    "keywords": ["humanoid robots", "industrial robots", "automation equipment", "servo motors", "edge AI"],
+    "symbols": ["NVDA", "TSLA", "2454.TW", "2317.TW"],
+    "daily_threshold_pct": 2.5,
+    "five_day_threshold_pct": 8.0,
+    "one_month_threshold_pct": 18.0
+  },
+  "vehicle technology": {
+    "keywords": ["electric vehicles", "autonomous driving", "automotive semiconductors", "charging infrastructure", "battery supply chain"],
+    "symbols": ["TSLA", "NVDA", "2454.TW", "2303.TW"],
+    "daily_threshold_pct": 2.5,
+    "five_day_threshold_pct": 8.0,
+    "one_month_threshold_pct": 18.0
+  },
+  "space exploration and moon landing": {
+    "keywords": ["moon landing program", "lunar base", "space exploration", "rocket launch", "aerospace supply chain"],
+    "symbols": ["TSLA"],
+    "daily_threshold_pct": 3.0,
+    "five_day_threshold_pct": 10.0,
+    "one_month_threshold_pct": 20.0
+  }
+}

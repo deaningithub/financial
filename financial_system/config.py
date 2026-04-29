@@ -16,6 +16,7 @@ SYMBOLS_FILE = CONFIG_DIR / "symbols.json"
 KEYWORD_WEIGHTS_FILE = CONFIG_DIR / "keyword_weights.json"
 POLICY_KEYWORDS_FILE = CONFIG_DIR / "policy_keywords.json"
 TREND_KEYWORDS_FILE = CONFIG_DIR / "trend_keywords.json"
+TREND_MONITORS_FILE = CONFIG_DIR / "trend_monitors.json"
 DB_PATH = DATA_DIR / "financial_data.db"
 
 
@@ -31,8 +32,10 @@ class Settings:
     keyword_decay_factor: float
     keyword_min_score: float
     policy_query_limit: int
-    trend_query_limit: int
     policy_company_query_limit: int
+    report_context_min: int
+    report_context_lookback_days: int
+    long_term_trend_query_limit: int
     news_locales: list[str]
 
 
@@ -49,8 +52,10 @@ def load_settings() -> Settings:
         keyword_decay_factor=float(os.getenv("KEYWORD_DECAY_FACTOR", "0.85")),
         keyword_min_score=float(os.getenv("KEYWORD_MIN_SCORE", "1.0")),
         policy_query_limit=int(os.getenv("POLICY_QUERY_LIMIT", "8")),
-        trend_query_limit=int(os.getenv("TREND_QUERY_LIMIT", "8")),
         policy_company_query_limit=int(os.getenv("POLICY_COMPANY_QUERY_LIMIT", "8")),
+        report_context_min=int(os.getenv("REPORT_CONTEXT_MIN", "3")),
+        report_context_lookback_days=int(os.getenv("REPORT_CONTEXT_LOOKBACK_DAYS", "45")),
+        long_term_trend_query_limit=int(os.getenv("LONG_TERM_TREND_QUERY_LIMIT", "6")),
         news_locales=[locale.strip().upper() for locale in os.getenv("NEWS_LOCALES", "US,TW").split(",") if locale.strip()],
     )
 
@@ -95,4 +100,11 @@ def load_trend_keywords() -> dict[str, list[str]]:
     if not TREND_KEYWORDS_FILE.exists():
         return {}
     with TREND_KEYWORDS_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_trend_monitors() -> dict:
+    if not TREND_MONITORS_FILE.exists():
+        return {}
+    with TREND_MONITORS_FILE.open("r", encoding="utf-8") as file:
         return json.load(file)

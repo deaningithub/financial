@@ -264,6 +264,14 @@ def save_monitor_event(event: MonitorEvent) -> None:
         connection.commit()
 
 
+def save_monitor_events(events: list[MonitorEvent]) -> int:
+    saved = 0
+    for event in events:
+        save_monitor_event(event)
+        saved += 1
+    return saved
+
+
 def load_monitor_events(
     lookback_hours: int = 36,
     limit: int = 20,

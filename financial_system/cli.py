@@ -7,7 +7,8 @@ from types import SimpleNamespace
 from financial_system.config import DATA_DIR, ensure_directories, load_trend_monitors, read_symbols, write_symbols
 from financial_system.dates import today_string
 from financial_system.config import load_settings
-from financial_system.database import init_db, load_historical_keyword_scores, load_monitor_events, save_monitor_event
+from financial_system.database import init_db, load_historical_keyword_scores, load_monitor_events, save_monitor_event, save_monitor_events
+from financial_system.google_sheet_bridge import fetch_monitor_events_from_sheet
 from financial_system.keywords import build_keyword_queries, build_policy_queries, blend_keywords, rank_keywords
 from financial_system.monitor_bridge import MonitorEvent, format_monitor_events
 from financial_system.notes import append_note
@@ -155,6 +156,16 @@ def _fmt_number(value: float | None) -> str:
 
 def _cmd_monitor_events(args: argparse.Namespace) -> None:
     init_db()
+    if args.sync_sheet:
+        settings = load_settings()
+        sheet_url = args.sheet_url or settings.google_sheet_monitor_url
+        if not sheet_url:
+            raise SystemExit("No Google Sheet URL provided. Set GOOGLE_SHEET_MONITOR_URL or pass --sheet-url.")
+        events, skipped = fetch_monitor_events_from_sheet(sheet_url)
+        imported = save_monitor_events(events)
+        print(f"Synced monitor events from Google Sheet: imported={imported}, skipped={skipped}")
+        return
+
     if args.add_sample:
         event = MonitorEvent(
             id=args.add_sample,
@@ -222,6 +233,8 @@ def build_parser() -> argparse.ArgumentParser:
     monitor_events.add_argument("--lookback-hours", type=int)
     monitor_events.add_argument("--limit", type=int)
     monitor_events.add_argument("--add-sample", help="Insert a sample event with this ID for bridge testing")
+    monitor_events.add_argument("--sync-sheet", action="store_true", help="Import monitor events from Google Sheet")
+    monitor_events.add_argument("--sheet-url", help="Override GOOGLE_SHEET_MONITOR_URL for this import")
     monitor_events.add_argument("--symbol")
     monitor_events.add_argument("--title")
     monitor_events.add_argument("--severity", default="medium")

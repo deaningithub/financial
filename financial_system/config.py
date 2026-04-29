@@ -43,6 +43,8 @@ class Settings:
     source_news_limit: int
     monitor_event_lookback_hours: int
     monitor_event_limit: int
+    google_sheet_monitor_url: str | None
+    google_sheet_monitor_enabled: bool
     news_locales: list[str]
 
 
@@ -68,6 +70,8 @@ def load_settings() -> Settings:
         source_news_limit=int(os.getenv("SOURCE_NEWS_LIMIT", "20")),
         monitor_event_lookback_hours=int(os.getenv("MONITOR_EVENT_LOOKBACK_HOURS", "36")),
         monitor_event_limit=int(os.getenv("MONITOR_EVENT_LIMIT", "20")),
+        google_sheet_monitor_url=os.getenv("GOOGLE_SHEET_MONITOR_URL") or None,
+        google_sheet_monitor_enabled=os.getenv("GOOGLE_SHEET_MONITOR_ENABLED", "true").lower() == "true",
         news_locales=[locale.strip().upper() for locale in os.getenv("NEWS_LOCALES", "US,TW").split(",") if locale.strip()],
     )
 

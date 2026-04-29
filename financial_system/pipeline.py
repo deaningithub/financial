@@ -21,6 +21,7 @@ from financial_system.database import (
     load_monitor_events,
     load_related_reports,
     save_daily_report,
+    save_monitor_events,
     save_risk_metrics,
 )
 from financial_system.dates import today_string
@@ -32,6 +33,7 @@ from financial_system.keywords import (
     rank_keywords,
 )
 from financial_system.llm import create_ai_report
+from financial_system.google_sheet_bridge import fetch_monitor_events_from_sheet
 from financial_system.market import fetch_market_snapshots, save_market_snapshots
 from financial_system.news import collect_news, save_news
 from financial_system.notes import read_notes
@@ -78,6 +80,15 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
     settings = load_settings()
     init_db()
     day = day or today_string(settings.timezone)
+
+    sheet_sync = None
+    if settings.google_sheet_monitor_enabled and settings.google_sheet_monitor_url:
+        try:
+            sheet_events, skipped_rows = fetch_monitor_events_from_sheet(settings.google_sheet_monitor_url)
+            imported_rows = save_monitor_events(sheet_events)
+            sheet_sync = f"imported={imported_rows}, skipped={skipped_rows}"
+        except Exception as exc:
+            sheet_sync = f"failed: {exc}"
 
     notes = read_notes(DATA_DIR / "manual_notes", day)
     symbols = read_symbols()
@@ -197,4 +208,5 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         "report": str(report_path),
         "market_snapshot": str(market_path),
         "news": str(news_path),
+        "sheet_monitor_sync": sheet_sync or "disabled",
     }

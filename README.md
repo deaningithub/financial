@@ -141,6 +141,16 @@ SQLite bridge for an external monitoring project:
 - The daily pipeline reads recent events and includes them in the report as external monitor context.
 - Use `python main.py monitor-events` to inspect recent bridge events.
 - Use `python main.py monitor-events --add-sample sample-1 --symbol NVDA --title "Sample volatility alert"` to test the bridge.
+- Use `python main.py monitor-events --sync-sheet` to import events from the configured Google Sheet.
+
+Google Sheet bridge:
+
+- Set `GOOGLE_SHEET_MONITOR_URL` to the monitor sheet URL.
+- The configured sheet must be readable as CSV by this Python process. The simplest setup is sharing the sheet as "Anyone with the link can view" or publishing the `MonitorEvents` tab.
+- The daily pipeline automatically imports the sheet before loading recent monitor events.
+- A Google Apps Script template is included at `google_apps_script/realtime_monitor_trader.gs`.
+- The Apps Script writes to `MonitorEvents` and can run on a time trigger.
+- Automated trader output is treated as paper/signal context only. The daily report will not execute orders.
 
 `monitor_events` schema:
 
@@ -154,6 +164,12 @@ SQLite bridge for an external monitoring project:
 | `severity` | `low`, `medium`, `high`, or `critical` |
 | `event_time` | ISO datetime from the external system |
 | `payload_json` | Full structured event payload |
+
+Expected Google Sheet columns for `MonitorEvents`:
+
+```text
+id,source,event_type,symbol,severity,event_time,title,price,previous_close,daily_change_pct,signal,reason,paper_position_size_pct,stop_loss_pct,take_profit_pct
+```
 
 Policy search settings:
 

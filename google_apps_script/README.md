@@ -52,6 +52,17 @@ createTimeTrigger
 
 ## Sheet Contract
 
+The Apps Script creates and maintains four tabs:
+
+```text
+MonitorConfig
+MonitorEvents
+MonitorSnapshots
+MonitorState
+```
+
+`MonitorConfig` controls symbols and alert thresholds. `MonitorEvents` is the event feed read by the Python daily report system. `MonitorSnapshots` stores the latest quote snapshot for every enabled symbol. `MonitorState` stores alert cooldown metadata so repeated monitor cycles do not spam duplicate events.
+
 The Python daily report system reads the `MonitorEvents` tab as CSV and imports rows into SQLite.
 
 Required columns:
@@ -63,7 +74,7 @@ id,source,event_type,symbol,severity,event_time,title
 Optional columns are preserved in the SQLite event payload:
 
 ```text
-price,previous_close,daily_change_pct,signal,reason,paper_position_size_pct,stop_loss_pct,take_profit_pct
+price,previous_close,open,day_high,day_low,volume,market_cap,trade_time,data_delay_minutes,daily_change_pct,intraday_change_pct,gap_pct,signal,reason,threshold,paper_position_size_pct,stop_loss_pct,take_profit_pct
 ```
 
 Trade output is paper signal context only. This Apps Script does not execute broker orders.

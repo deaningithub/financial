@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from financial_system.config import DB_PATH
 from financial_system.market import MarketSnapshot
 from financial_system.news import NewsItem
+from financial_system.risk_analyzer import RiskMetrics
 
 CREATE_TABLES_SQL = [
     """
@@ -51,6 +52,18 @@ CREATE_TABLES_SQL = [
         ai_report TEXT,
         keyword_scores_json TEXT NOT NULL,
         created_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS risk_metrics (
+        day TEXT NOT NULL,
+        symbol TEXT NOT NULL,
+        name TEXT NOT NULL,
+        region TEXT NOT NULL,
+        risk_level TEXT NOT NULL,
+        metrics_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(day, symbol)
     )
     """,
 ]
@@ -185,6 +198,31 @@ def save_daily_report(
                 json.dumps(keyword_scores, ensure_ascii=False, sort_keys=True),
                 datetime.now().isoformat(timespec="seconds"),
             ),
+        )
+        connection.commit()
+
+
+def save_risk_metrics(day: str, metrics: list[RiskMetrics]) -> None:
+    rows = [
+        (
+            day,
+            item.symbol,
+            item.name,
+            item.region,
+            item.risk_level,
+            json.dumps(item.to_dict(), ensure_ascii=False, sort_keys=True),
+            datetime.now().isoformat(timespec="seconds"),
+        )
+        for item in metrics
+    ]
+    with _connect() as connection:
+        connection.executemany(
+            """
+            INSERT OR REPLACE INTO risk_metrics
+                (day, symbol, name, region, risk_level, metrics_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
         )
         connection.commit()
 

@@ -10,6 +10,8 @@ from financial_system.database import init_db, load_historical_keyword_scores
 from financial_system.keywords import build_keyword_queries, build_policy_queries, blend_keywords, rank_keywords
 from financial_system.notes import append_note
 from financial_system.notes import read_notes
+from financial_system.risk_analyzer import calculate_risk_metrics
+from financial_system.market import fetch_market_snapshots
 
 
 def _cmd_add_note(args: argparse.Namespace) -> None:
@@ -120,6 +122,35 @@ def _cmd_inspect_keywords(args: argparse.Namespace) -> None:
             )
 
 
+def _cmd_risk(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    day = args.date or today_string(settings.timezone)
+    symbols = read_symbols()
+    if args.symbols:
+        wanted = {symbol.upper() for symbol in args.symbols}
+        symbols = [item for item in symbols if item["symbol"].upper() in wanted]
+    snapshots = fetch_market_snapshots(symbols)
+    metrics = calculate_risk_metrics(snapshots, day=day, max_symbols=args.limit)
+    if not metrics:
+        print("No risk metrics available. Market data may be missing or the data source may be unavailable.")
+        return
+    for item in metrics:
+        notes = "; ".join(item.notes) if item.notes else "No abnormal risk flags."
+        print(
+            f"{item.symbol}: risk={item.risk_level}, "
+            f"30d_vol={_fmt_number(item.volatility_30d)}%, "
+            f"90d_vol={_fmt_number(item.volatility_90d)}%, "
+            f"max_drawdown={_fmt_number(item.max_drawdown_252d)}%, "
+            f"beta={_fmt_number(item.beta_vs_sp500)} | {notes}"
+        )
+
+
+def _fmt_number(value: float | None) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:.2f}"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Daily financial intelligence system")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -153,6 +184,12 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_keywords.add_argument("--policy-limit", type=int)
     inspect_keywords.add_argument("--policy-company-limit", type=int)
     inspect_keywords.set_defaults(func=_cmd_inspect_keywords)
+
+    risk = subparsers.add_parser("risk", help="Calculate current risk metrics")
+    risk.add_argument("--date")
+    risk.add_argument("--symbols", nargs="*")
+    risk.add_argument("--limit", type=int, default=24)
+    risk.set_defaults(func=_cmd_risk)
 
     return parser
 

@@ -5,9 +5,12 @@ from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 import json
+import re
 from urllib.parse import quote_plus
 
 import feedparser
+
+from financial_system.config import load_news_sources
 
 
 @dataclass
@@ -17,6 +20,31 @@ class NewsItem:
     source: str
     link: str
     published: str | None
+
+
+STOP_TOKENS = {
+    "and",
+    "are",
+    "for",
+    "from",
+    "impact",
+    "market",
+    "news",
+    "reason",
+    "stock",
+    "the",
+    "today",
+    "trend",
+    "why",
+}
+
+
+def _tokens(value: str) -> set[str]:
+    return {
+        token.lower()
+        for token in re.findall(r"[A-Za-z][A-Za-z0-9.-]{2,}", value)
+        if token.lower() not in STOP_TOKENS
+    }
 
 
 def _published_datetime(value: str | None) -> datetime | None:
@@ -70,11 +98,47 @@ def search_google_news(
     return items
 
 
+def search_source_feed(
+    query: str,
+    source: dict,
+    limit: int = 3,
+    max_age_days: int = 14,
+) -> list[NewsItem]:
+    if not source.get("enabled", True):
+        return []
+    feed = feedparser.parse(source["url"])
+    query_tokens = _tokens(query)
+    cutoff = datetime.utcnow() - timedelta(days=max_age_days)
+    items: list[NewsItem] = []
+    for entry in feed.entries:
+        title = getattr(entry, "title", "")
+        summary = getattr(entry, "summary", "")
+        published = getattr(entry, "published", None)
+        published_at = _published_datetime(published)
+        if published_at and published_at < cutoff:
+            continue
+        if query_tokens and not (query_tokens & _tokens(f"{title} {summary}")):
+            continue
+        items.append(
+            NewsItem(
+                query=query,
+                title=title,
+                source=source.get("name", "RSS"),
+                link=getattr(entry, "link", ""),
+                published=published,
+            )
+        )
+        if len(items) >= limit:
+            break
+    return items
+
+
 def collect_news(
     queries: list[str],
     limit_per_query: int = 5,
     max_age_days: int = 14,
     locales: list[str] | None = None,
+    source_limit: int = 20,
 ) -> list[NewsItem]:
     if locales is None:
         locales = ["US"]
@@ -93,6 +157,26 @@ def collect_news(
                     continue
                 seen.add(key)
                 results.append(item)
+    sources = load_news_sources()
+    source_count = 0
+    for query in queries:
+        for source in sources:
+            if source_count >= source_limit:
+                return results
+            for item in search_source_feed(
+                query,
+                source,
+                limit=2,
+                max_age_days=max_age_days,
+            ):
+                key = item.link or item.title
+                if key in seen:
+                    continue
+                seen.add(key)
+                results.append(item)
+                source_count += 1
+                if source_count >= source_limit:
+                    return results
     return results
 
 

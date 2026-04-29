@@ -5,10 +5,12 @@ from financial_system.config import (
     DATA_DIR,
     OUTPUT_DIR,
     ensure_directories,
+    load_correlation_pairs,
     load_settings,
     load_trend_monitors,
     read_symbols,
 )
+from financial_system.correlation import compute_cross_market_correlations
 from financial_system.database import (
     init_db,
     save_market_snapshots as save_market_snapshots_db,
@@ -18,8 +20,10 @@ from financial_system.database import (
     load_historical_keyword_scores,
     load_related_reports,
     save_daily_report,
+    save_risk_metrics,
 )
 from financial_system.dates import today_string
+from financial_system.dynamic_weights import build_dynamic_condition_queries
 from financial_system.keywords import (
     build_keyword_queries,
     build_policy_queries,
@@ -31,6 +35,7 @@ from financial_system.market import fetch_market_snapshots, save_market_snapshot
 from financial_system.news import collect_news, save_news
 from financial_system.notes import read_notes
 from financial_system.report import render_report, save_report
+from financial_system.risk_analyzer import calculate_risk_metrics
 from financial_system.trend_monitor import (
     build_long_term_trend_queries,
     evaluate_long_term_trends,
@@ -77,6 +82,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
     symbols = read_symbols()
     snapshots = fetch_market_snapshots(symbols)
     movers = rank_biggest_movers(snapshots)
+    risk_metrics = calculate_risk_metrics(snapshots, day=day)
 
     current_scores = rank_keywords(notes, limit=settings.keyword_limit)
     historical_scores = load_historical_keyword_scores(
@@ -106,14 +112,20 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         policy_limit=settings.policy_query_limit,
         company_limit=settings.policy_company_query_limit,
     )
+    dynamic_queries = build_dynamic_condition_queries(snapshots, max_queries=8)
+    correlations = compute_cross_market_correlations(
+        load_correlation_pairs(),
+        lookback_days=settings.correlation_lookback_days,
+        min_abs_correlation=settings.correlation_min_abs,
+    )
     anomaly_queries = build_anomaly_queries(movers)
-    queries = anomaly_queries + keyword_queries + secondary_queries + policy_queries + long_term_trend_queries
+    queries = anomaly_queries + dynamic_queries + keyword_queries + secondary_queries + policy_queries + long_term_trend_queries
     report_keyword_scores = _build_report_keyword_scores(
         current_scores=current_scores,
         primary_keywords=primary_keywords,
         secondary_keywords=secondary_keywords,
         long_term_trend_queries=long_term_trend_queries,
-        policy_queries=policy_queries,
+        policy_queries=policy_queries + dynamic_queries,
         movers=movers,
     )
     related_reports = load_related_reports(
@@ -127,6 +139,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         limit_per_query=4,
         max_age_days=14,
         locales=settings.news_locales,
+        source_limit=settings.source_news_limit,
     ) if queries else []
 
     market_path = DATA_DIR / "market_snapshots" / f"{day}.json"
@@ -138,6 +151,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
     save_market_snapshots_db(day, snapshots)
     save_news_db(day, news_items)
     save_notes(day, notes)
+    save_risk_metrics(day, risk_metrics)
 
     ai_report = None
     if use_ai and settings.openai_api_key:
@@ -151,6 +165,8 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
             news_items=news_items,
             related_reports=related_reports,
             long_term_alerts=long_term_alerts,
+            correlations=correlations,
+            risk_metrics=risk_metrics,
         )
 
     report = render_report(
@@ -160,6 +176,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         movers=movers,
         news_items=news_items,
         ai_report=ai_report,
+        risk_metrics=risk_metrics,
     )
     save_report(report_path, report)
     save_daily_report(

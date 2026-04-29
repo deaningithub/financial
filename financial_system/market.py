@@ -8,6 +8,8 @@ import math
 
 import yfinance as yf
 
+from financial_system.config import DATA_DIR
+
 
 @dataclass
 class MarketSnapshot:
@@ -22,6 +24,15 @@ class MarketSnapshot:
     five_day_change_pct: float | None
     one_month_change_pct: float | None
     status: str
+
+
+def configure_yfinance_cache() -> None:
+    cache_dir = DATA_DIR / "yfinance_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        yf.set_tz_cache_location(str(cache_dir))
+    except Exception:
+        pass
 
 
 def _clean(value: object) -> float | None:
@@ -55,6 +66,7 @@ def _status(change_pct: float | None) -> str:
 
 
 def fetch_market_snapshot(symbol_config: dict) -> MarketSnapshot:
+    configure_yfinance_cache()
     symbol = symbol_config["symbol"]
     ticker = yf.Ticker(symbol)
     history = ticker.history(period="2mo", interval="1d", auto_adjust=False)
@@ -109,3 +121,67 @@ def save_market_snapshots(path: Path, snapshots: list[MarketSnapshot]) -> None:
     with path.open("w", encoding="utf-8") as file:
         json.dump(payload, file, indent=2)
         file.write("\n")
+
+
+class MarketDataCollector:
+    """Small async-compatible wrapper for cached market snapshots."""
+
+    def __init__(self):
+        self.symbols_config = [
+            {"symbol": "AAPL", "name": "Apple Inc.", "type": "stock", "region": "US"},
+            {"symbol": "NVDA", "name": "NVIDIA Corporation", "type": "stock", "region": "US"},
+            {"symbol": "2330.TW", "name": "Taiwan Semiconductor", "type": "stock", "region": "TW"},
+            {"symbol": "^GSPC", "name": "S&P 500", "type": "index", "region": "US"},
+            {"symbol": "^VIX", "name": "VIX Volatility Index", "type": "index", "region": "US"},
+        ]
+
+    async def initialize(self):
+        """Prepare local yfinance cache storage."""
+        configure_yfinance_cache()
+
+    async def collect_all_data(self):
+        """Collect configured market snapshots into the latest snapshot file."""
+        snapshots = fetch_market_snapshots(self.symbols_config)
+        save_market_snapshots(DATA_DIR / "latest_snapshots.json", snapshots)
+        return snapshots
+
+    async def get_latest_snapshots(self) -> list[MarketSnapshot]:
+        """Load the latest cached market snapshots."""
+        try:
+            snapshots_path = DATA_DIR / "latest_snapshots.json"
+            if snapshots_path.exists():
+                with snapshots_path.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return [MarketSnapshot(**s) for s in data.get("snapshots", [])]
+        except Exception:
+            pass
+        return []
+
+    async def get_top_movers(self) -> list[dict]:
+        """Return the largest cached daily market moves."""
+        snapshots = await self.get_latest_snapshots()
+        movers = []
+
+        for snapshot in snapshots:
+            if snapshot.daily_change_pct and abs(snapshot.daily_change_pct) > 2:
+                movers.append({
+                    "symbol": snapshot.symbol,
+                    "name": snapshot.name,
+                    "change_pct": snapshot.daily_change_pct,
+                    "price": snapshot.last_price,
+                    "direction": "up" if snapshot.daily_change_pct > 0 else "down"
+                })
+
+        movers.sort(key=lambda x: abs(x["change_pct"]), reverse=True)
+        return movers[:10]
+
+    async def get_latest_news(self) -> list[dict]:
+        """Return a minimal placeholder for callers that expect latest news."""
+        return [
+            {
+                "title": "Market Update",
+                "summary": "Daily market summary",
+                "timestamp": datetime.now().isoformat(),
+                "sentiment": "neutral"
+            }
+        ]

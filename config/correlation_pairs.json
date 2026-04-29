@@ -1,0 +1,14 @@
+[
+  {"left": "^GSPC", "right": "^TWII", "label": "US equities vs Taiwan equities"},
+  {"left": "^GSPC", "right": "^STOXX50E", "label": "US equities vs Europe equities"},
+  {"left": "^GSPC", "right": "^N225", "label": "US equities vs Japan equities"},
+  {"left": "^GSPC", "right": "000001.SS", "label": "US equities vs China A-shares"},
+  {"left": "^GSPC", "right": "^HSI", "label": "US equities vs Hong Kong equities"},
+  {"left": "^GSPC", "right": "^BSESN", "label": "US equities vs India equities"},
+  {"left": "^NDX", "right": "2330.TW", "label": "Nasdaq 100 vs TSMC"},
+  {"left": "NVDA", "right": "2330.TW", "label": "Nvidia vs TSMC"},
+  {"left": "CL=F", "right": "XOM", "label": "Oil vs Exxon Mobil"},
+  {"left": "^TNX", "right": "^NDX", "label": "US 10Y yield vs Nasdaq 100"},
+  {"left": "DX-Y.NYB", "right": "GC=F", "label": "US dollar vs gold"},
+  {"left": "BTC-USD", "right": "^NDX", "label": "Bitcoin vs Nasdaq 100"}
+]

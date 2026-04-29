@@ -5,6 +5,7 @@ from collections import defaultdict
 
 from financial_system.market import MarketSnapshot
 from financial_system.news import NewsItem
+from financial_system.risk_analyzer import RiskMetrics
 
 
 def _format_pct(value: float | None) -> str:
@@ -30,6 +31,7 @@ def render_report(
     movers: list[MarketSnapshot],
     news_items: list[NewsItem],
     ai_report: str | None,
+    risk_metrics: list[RiskMetrics] | None = None,
 ) -> str:
     lines = [
         f"# Daily Financial Report - {day}",
@@ -56,6 +58,27 @@ def render_report(
     for region in sorted(by_region):
         lines.extend(["", f"### {region}"])
         _append_snapshot_table(lines, by_region[region])
+
+    lines.extend(["", "## Risk Dashboard"])
+    risk_metrics = risk_metrics or []
+    if risk_metrics:
+        lines.extend(
+            [
+                "| Name | Symbol | Region | Risk | 30D Vol | 90D Vol | Max Drawdown | Beta vs S&P 500 | Notes |",
+                "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |",
+            ]
+        )
+        for item in risk_metrics[:10]:
+            notes_text = "; ".join(item.notes) if item.notes else "No abnormal risk flags."
+            lines.append(
+                f"| {item.name} | {item.symbol} | {item.region} | {item.risk_level} | "
+                f"{_format_pct(item.volatility_30d)} | {_format_pct(item.volatility_90d)} | "
+                f"{_format_pct(item.max_drawdown_252d)} | "
+                f"{'n/a' if item.beta_vs_sp500 is None else f'{item.beta_vs_sp500:.2f}'} | "
+                f"{notes_text} |"
+            )
+    else:
+        lines.append("No risk metrics available.")
 
     lines.extend(["", "## Related News"])
     if news_items:

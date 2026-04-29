@@ -1,0 +1,22 @@
+[
+  {
+    "name": "CNBC Markets",
+    "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+    "enabled": true
+  },
+  {
+    "name": "CNBC Finance",
+    "url": "https://www.cnbc.com/id/10000664/device/rss/rss.html",
+    "enabled": true
+  },
+  {
+    "name": "MarketWatch Top Stories",
+    "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+    "enabled": true
+  },
+  {
+    "name": "Reuters Business",
+    "url": "https://feeds.reuters.com/reuters/businessNews",
+    "enabled": true
+  }
+]

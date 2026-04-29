@@ -7,5 +7,16 @@
   "china export": 3,
   "inflation": 4,
   "interest rate": 4,
-  "shipping": 2
+  "shipping": 2,
+  "ECB policy": 4,
+  "BOJ policy": 4,
+  "PBOC policy": 4,
+  "China stimulus": 5,
+  "yuan": 3,
+  "yen": 3,
+  "credit spread": 4,
+  "healthcare": 3,
+  "financial stocks": 3,
+  "energy stocks": 3,
+  "consumer spending": 3
 }

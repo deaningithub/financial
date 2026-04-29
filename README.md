@@ -121,7 +121,18 @@ The default list includes:
 - Oil
 - Bitcoin
 - A few large US stocks
+- Sector representatives for healthcare, financials, energy, and consumer
+- Europe, China, Hong Kong, Japan, and India index coverage
 - Taiwan market status: TAIEX, Taiwan 50 ETF, TSMC, MediaTek, Hon Hai, UMC
+
+The pipeline also creates dynamic short-term condition queries from market state, such as VIX stress, oil shocks, dollar/yield moves, and regional index selloffs or rallies.
+
+Phase 2 analysis features:
+
+- Cross-market correlation pairs are configured in `config/correlation_pairs.json`.
+- Extra RSS news sources are configured in `config/news_sources.json`.
+- Dynamic condition queries react to volatility, oil, dollar, yield, and regional index moves.
+- AI reports receive correlation results so they can discuss synchronized moves and divergences across markets.
 
 Policy search settings:
 
@@ -130,6 +141,9 @@ Policy search settings:
 - `REPORT_CONTEXT_MIN=3`
 - `REPORT_CONTEXT_LOOKBACK_DAYS=45`
 - `LONG_TERM_TREND_QUERY_LIMIT=6`
+- `CORRELATION_LOOKBACK_DAYS=90`
+- `CORRELATION_MIN_ABS=0.45`
+- `SOURCE_NEWS_LIMIT=20`
 
 ## Notes
 

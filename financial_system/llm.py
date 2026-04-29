@@ -5,11 +5,13 @@ from openai import OpenAI
 from financial_system.market import MarketSnapshot
 from financial_system.news import NewsItem
 from financial_system.trend_monitor import TrendAlert, format_trend_alerts
+from financial_system.correlation import CorrelationResult, format_correlations
+from financial_system.risk_analyzer import RiskMetrics, format_risk_metrics
 
 
 SYSTEM_PROMPT = """You are a financial intelligence analyst.
 
-Create a grounded daily market brief from the provided market data, user notes, news links, related historical reports, and long-term trend monitor status.
+Create a grounded daily market brief from the provided market data, user notes, news links, related historical reports, risk metrics, cross-market correlations, and long-term trend monitor status.
 
 Rules:
 - Write the entire report in English.
@@ -72,6 +74,8 @@ def create_ai_report(
     news_items: list[NewsItem],
     related_reports: list[dict] | None = None,
     long_term_alerts: list[TrendAlert] | None = None,
+    correlations: list[CorrelationResult] | None = None,
+    risk_metrics: list[RiskMetrics] | None = None,
 ) -> str:
     client = OpenAI(api_key=api_key)
     mover_names = ", ".join(
@@ -99,6 +103,12 @@ Related historical reports selected by weighted keyword relevance:
 Long-term trend monitor status:
 {format_trend_alerts(long_term_alerts or [])}
 
+Risk dashboard:
+{format_risk_metrics(risk_metrics or [])}
+
+Cross-market correlation analysis:
+{format_correlations(correlations or [])}
+
 Write in English.
 
 Use the related historical reports first to establish context:
@@ -108,6 +118,8 @@ Use the related historical reports first to establish context:
 - Reference at least 3 historical reports when the system provides them. If fewer than 3 are available, state that the database has insufficient historical reports.
 
 The daily report should focus on short-term international political and economic conditions: rates, inflation, oil, currencies, geopolitics, policy changes, earnings, and cross-market risk appetite.
+Use the cross-market correlation analysis to identify synchronized risk-on/risk-off behavior or unusual divergence across the U.S., Taiwan, Europe, China/Hong Kong, Japan, India, commodities, yields, and currencies.
+Use the risk dashboard to identify volatility, drawdown, beta, and concentration risks. Do not convert these risk metrics into trading instructions.
 
 The following long-term framework should be treated as a monitoring layer, not the main report theme:
 - AI chips: GPU, HBM, advanced packaging, data center capex, TSMC, and related supply chains.
@@ -123,10 +135,11 @@ Write the daily financial summary and risk assessment with these sections:
 3. Biggest moves and likely drivers
 4. Taiwan market status
 5. Short-term political and economic situation
-6. Political and company policy watch
-7. Long-term trend monitor status
-8. Risk assessment
-9. What to monitor next
+6. Cross-market correlation and divergence
+7. Political and company policy watch
+8. Long-term trend monitor status
+9. Risk assessment
+10. What to monitor next
 """
     response = client.responses.create(
         model=model,

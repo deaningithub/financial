@@ -5,13 +5,13 @@ This folder contains the standalone Apps Script monitor/trader signal layer.
 Script project:
 
 ```text
-https://script.google.com/u/0/home/projects/19z2ey5dKhGX68ED8MPfrnLHH7rtBCwgaZNq7Bvnz_nh4v78tSOFn5eIL/edit
+https://script.google.com/u/0/home/projects/1790GlHz_45P_dI735MTQZ8blzqv3pGxD3aG6mii9ndo25kZMMjZVUGLH/edit
 ```
 
 Google Sheet:
 
 ```text
-https://docs.google.com/spreadsheets/d/1P5yQwn8K6aN62OTHRTyOlCKxTCedOXWVa8jiSFx87dU/edit
+https://docs.google.com/spreadsheets/d/1IKQHRmyye8nXodRNNSYyo5QaCyJB8pYM4qUzg8tLwns/edit
 ```
 
 ## Deploy With Clasp

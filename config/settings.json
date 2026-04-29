@@ -24,5 +24,25 @@
     "bankruptcy",
     "dividend",
     "stock split"
-  ]
+  ],
+  "google_sheets": {
+    "service_account_file": "credentials.json",
+    "spreadsheet_id": "your_spreadsheet_id_here",
+    "sync_enabled": true,
+    "sync_interval_seconds": 60,
+    "max_sheet_rows": 5000
+  },
+  "trading": {
+    "initial_capital": 100000,
+    "max_positions": 10,
+    "daily_pnl_limit": 10000,
+    "default_stop_loss_pct": 0.05,
+    "default_take_profit_pct": 0.10
+  },
+  "monitoring": {
+    "alert_cooldown_minutes": 60,
+    "price_check_interval": 60,
+    "news_check_interval": 300,
+    "volatility_check_interval": 600
+  }
 }

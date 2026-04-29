@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from types import SimpleNamespace
 
 from financial_system.config import DATA_DIR, ensure_directories, load_trend_monitors, read_symbols, write_symbols
 from financial_system.dates import today_string
 from financial_system.config import load_settings
-from financial_system.database import init_db, load_historical_keyword_scores
+from financial_system.database import init_db, load_historical_keyword_scores, load_monitor_events, save_monitor_event
 from financial_system.keywords import build_keyword_queries, build_policy_queries, blend_keywords, rank_keywords
+from financial_system.monitor_bridge import MonitorEvent, format_monitor_events
 from financial_system.notes import append_note
 from financial_system.notes import read_notes
 from financial_system.risk_analyzer import calculate_risk_metrics
@@ -151,6 +153,31 @@ def _fmt_number(value: float | None) -> str:
     return f"{value:.2f}"
 
 
+def _cmd_monitor_events(args: argparse.Namespace) -> None:
+    init_db()
+    if args.add_sample:
+        event = MonitorEvent(
+            id=args.add_sample,
+            source="manual-cli",
+            event_type="sample_alert",
+            symbol=args.symbol,
+            title=args.title or "Sample external monitor event",
+            severity=args.severity,
+            event_time=args.event_time,
+            payload={"note": "Inserted through CLI for SQLite bridge testing."},
+        )
+        save_monitor_event(event)
+        print(f"Saved monitor event: {event.id}")
+        return
+
+    settings = load_settings()
+    events = load_monitor_events(
+        lookback_hours=args.lookback_hours or settings.monitor_event_lookback_hours,
+        limit=args.limit or settings.monitor_event_limit,
+    )
+    print(format_monitor_events(events))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Daily financial intelligence system")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -190,6 +217,16 @@ def build_parser() -> argparse.ArgumentParser:
     risk.add_argument("--symbols", nargs="*")
     risk.add_argument("--limit", type=int, default=24)
     risk.set_defaults(func=_cmd_risk)
+
+    monitor_events = subparsers.add_parser("monitor-events", help="Inspect external monitor events stored in SQLite")
+    monitor_events.add_argument("--lookback-hours", type=int)
+    monitor_events.add_argument("--limit", type=int)
+    monitor_events.add_argument("--add-sample", help="Insert a sample event with this ID for bridge testing")
+    monitor_events.add_argument("--symbol")
+    monitor_events.add_argument("--title")
+    monitor_events.add_argument("--severity", default="medium")
+    monitor_events.add_argument("--event-time", default=datetime.utcnow().isoformat(timespec="seconds"))
+    monitor_events.set_defaults(func=_cmd_monitor_events)
 
     return parser
 

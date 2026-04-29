@@ -134,6 +134,27 @@ Phase 2 analysis features:
 - Dynamic condition queries react to volatility, oil, dollar, yield, and regional index moves.
 - AI reports receive correlation results so they can discuss synchronized moves and divergences across markets.
 
+SQLite bridge for an external monitoring project:
+
+- This project does not run real-time monitoring.
+- External systems can write alert-style events into the `monitor_events` table in `data/financial_data.db`.
+- The daily pipeline reads recent events and includes them in the report as external monitor context.
+- Use `python main.py monitor-events` to inspect recent bridge events.
+- Use `python main.py monitor-events --add-sample sample-1 --symbol NVDA --title "Sample volatility alert"` to test the bridge.
+
+`monitor_events` schema:
+
+| Column | Purpose |
+| --- | --- |
+| `id` | Stable unique event ID from the external system |
+| `source` | External project or service name |
+| `event_type` | Alert category, such as `price_alert` or `macro_alert` |
+| `symbol` | Optional related symbol |
+| `title` | Human-readable alert title |
+| `severity` | `low`, `medium`, `high`, or `critical` |
+| `event_time` | ISO datetime from the external system |
+| `payload_json` | Full structured event payload |
+
 Policy search settings:
 
 - `POLICY_QUERY_LIMIT=8`

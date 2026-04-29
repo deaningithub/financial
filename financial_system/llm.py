@@ -3,6 +3,7 @@ from __future__ import annotations
 from openai import OpenAI
 
 from financial_system.market import MarketSnapshot
+from financial_system.monitor_bridge import MonitorEvent, format_monitor_events
 from financial_system.news import NewsItem
 from financial_system.trend_monitor import TrendAlert, format_trend_alerts
 from financial_system.correlation import CorrelationResult, format_correlations
@@ -11,7 +12,7 @@ from financial_system.risk_analyzer import RiskMetrics, format_risk_metrics
 
 SYSTEM_PROMPT = """You are a financial intelligence analyst.
 
-Create a grounded daily market brief from the provided market data, user notes, news links, related historical reports, risk metrics, cross-market correlations, and long-term trend monitor status.
+Create a grounded daily market brief from the provided market data, user notes, news links, related historical reports, external monitor events, risk metrics, cross-market correlations, and long-term trend monitor status.
 
 Rules:
 - Write the entire report in English.
@@ -76,6 +77,7 @@ def create_ai_report(
     long_term_alerts: list[TrendAlert] | None = None,
     correlations: list[CorrelationResult] | None = None,
     risk_metrics: list[RiskMetrics] | None = None,
+    monitor_events: list[MonitorEvent] | None = None,
 ) -> str:
     client = OpenAI(api_key=api_key)
     mover_names = ", ".join(
@@ -106,6 +108,9 @@ Long-term trend monitor status:
 Risk dashboard:
 {format_risk_metrics(risk_metrics or [])}
 
+External monitor events from SQLite bridge:
+{format_monitor_events(monitor_events or [])}
+
 Cross-market correlation analysis:
 {format_correlations(correlations or [])}
 
@@ -120,6 +125,7 @@ Use the related historical reports first to establish context:
 The daily report should focus on short-term international political and economic conditions: rates, inflation, oil, currencies, geopolitics, policy changes, earnings, and cross-market risk appetite.
 Use the cross-market correlation analysis to identify synchronized risk-on/risk-off behavior or unusual divergence across the U.S., Taiwan, Europe, China/Hong Kong, Japan, India, commodities, yields, and currencies.
 Use the risk dashboard to identify volatility, drawdown, beta, and concentration risks. Do not convert these risk metrics into trading instructions.
+Use external monitor events only as alert context from another system. Do not assume the current project generated those alerts.
 
 The following long-term framework should be treated as a monitoring layer, not the main report theme:
 - AI chips: GPU, HBM, advanced packaging, data center capex, TSMC, and related supply chains.

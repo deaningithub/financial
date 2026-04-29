@@ -18,6 +18,7 @@ from financial_system.database import (
     save_notes,
     save_keyword_scores,
     load_historical_keyword_scores,
+    load_monitor_events,
     load_related_reports,
     save_daily_report,
     save_risk_metrics,
@@ -83,6 +84,10 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
     snapshots = fetch_market_snapshots(symbols)
     movers = rank_biggest_movers(snapshots)
     risk_metrics = calculate_risk_metrics(snapshots, day=day)
+    monitor_events = load_monitor_events(
+        lookback_hours=settings.monitor_event_lookback_hours,
+        limit=settings.monitor_event_limit,
+    )
 
     current_scores = rank_keywords(notes, limit=settings.keyword_limit)
     historical_scores = load_historical_keyword_scores(
@@ -167,6 +172,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
             long_term_alerts=long_term_alerts,
             correlations=correlations,
             risk_metrics=risk_metrics,
+            monitor_events=monitor_events,
         )
 
     report = render_report(
@@ -177,6 +183,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         news_items=news_items,
         ai_report=ai_report,
         risk_metrics=risk_metrics,
+        monitor_events=monitor_events,
     )
     save_report(report_path, report)
     save_daily_report(

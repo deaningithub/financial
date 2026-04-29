@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import defaultdict
 
 from financial_system.market import MarketSnapshot
+from financial_system.monitor_bridge import MonitorEvent, format_monitor_events
 from financial_system.news import NewsItem
 from financial_system.risk_analyzer import RiskMetrics
 
@@ -32,6 +33,7 @@ def render_report(
     news_items: list[NewsItem],
     ai_report: str | None,
     risk_metrics: list[RiskMetrics] | None = None,
+    monitor_events: list[MonitorEvent] | None = None,
 ) -> str:
     lines = [
         f"# Daily Financial Report - {day}",
@@ -79,6 +81,9 @@ def render_report(
             )
     else:
         lines.append("No risk metrics available.")
+
+    lines.extend(["", "## External Monitor Events"])
+    lines.append(format_monitor_events(monitor_events or []))
 
     lines.extend(["", "## Related News"])
     if news_items:

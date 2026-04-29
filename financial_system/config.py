@@ -41,6 +41,8 @@ class Settings:
     correlation_lookback_days: int
     correlation_min_abs: float
     source_news_limit: int
+    monitor_event_lookback_hours: int
+    monitor_event_limit: int
     news_locales: list[str]
 
 
@@ -64,6 +66,8 @@ def load_settings() -> Settings:
         correlation_lookback_days=int(os.getenv("CORRELATION_LOOKBACK_DAYS", "90")),
         correlation_min_abs=float(os.getenv("CORRELATION_MIN_ABS", "0.45")),
         source_news_limit=int(os.getenv("SOURCE_NEWS_LIMIT", "20")),
+        monitor_event_lookback_hours=int(os.getenv("MONITOR_EVENT_LOOKBACK_HOURS", "36")),
+        monitor_event_limit=int(os.getenv("MONITOR_EVENT_LIMIT", "20")),
         news_locales=[locale.strip().upper() for locale in os.getenv("NEWS_LOCALES", "US,TW").split(",") if locale.strip()],
     )
 

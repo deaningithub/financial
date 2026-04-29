@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from financial_system.config import DB_PATH
 from financial_system.market import MarketSnapshot
+from financial_system.monitor_bridge import MonitorEvent
 from financial_system.news import NewsItem
 from financial_system.risk_analyzer import RiskMetrics
 
@@ -64,6 +65,19 @@ CREATE_TABLES_SQL = [
         metrics_json TEXT NOT NULL,
         created_at TEXT NOT NULL,
         PRIMARY KEY(day, symbol)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS monitor_events (
+        id TEXT PRIMARY KEY,
+        source TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        symbol TEXT,
+        title TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        event_time TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
     )
     """,
 ]
@@ -225,6 +239,74 @@ def save_risk_metrics(day: str, metrics: list[RiskMetrics]) -> None:
             rows,
         )
         connection.commit()
+
+
+def save_monitor_event(event: MonitorEvent) -> None:
+    with _connect() as connection:
+        connection.execute(
+            """
+            INSERT OR REPLACE INTO monitor_events
+                (id, source, event_type, symbol, title, severity, event_time, payload_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                event.id,
+                event.source,
+                event.event_type,
+                event.symbol,
+                event.title,
+                event.severity,
+                event.event_time,
+                json.dumps(event.payload, ensure_ascii=False, sort_keys=True),
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+        connection.commit()
+
+
+def load_monitor_events(
+    lookback_hours: int = 36,
+    limit: int = 20,
+) -> list[MonitorEvent]:
+    cutoff = datetime.utcnow() - timedelta(hours=lookback_hours)
+    with _connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, source, event_type, symbol, title, severity, event_time, payload_json
+            FROM monitor_events
+            ORDER BY event_time DESC
+            """
+        ).fetchall()
+
+    events: list[MonitorEvent] = []
+    for row in rows:
+        try:
+            event_time = datetime.fromisoformat(row["event_time"].replace("Z", "+00:00"))
+            if event_time.tzinfo is not None:
+                event_time = event_time.replace(tzinfo=None)
+        except ValueError:
+            continue
+        if event_time < cutoff:
+            continue
+        try:
+            payload = json.loads(row["payload_json"])
+        except json.JSONDecodeError:
+            payload = {}
+        events.append(
+            MonitorEvent(
+                id=row["id"],
+                source=row["source"],
+                event_type=row["event_type"],
+                symbol=row["symbol"],
+                title=row["title"],
+                severity=row["severity"],
+                event_time=row["event_time"],
+                payload=payload,
+            )
+        )
+        if len(events) >= limit:
+            break
+    return events
 
 
 def load_related_reports(

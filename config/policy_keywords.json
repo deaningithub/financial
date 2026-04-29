@@ -1,0 +1,34 @@
+{
+  "terms": [
+    "interest rate policy",
+    "Federal Reserve policy",
+    "tariff policy",
+    "export controls",
+    "semiconductor restrictions",
+    "AI regulation",
+    "antitrust investigation",
+    "tax policy",
+    "industrial policy",
+    "defense spending",
+    "energy policy",
+    "China stimulus",
+    "Taiwan semiconductor policy",
+    "Taiwan central bank policy",
+    "Taiwan export orders",
+    "TSMC capex",
+    "Nvidia export control",
+    "Apple supply chain",
+    "Microsoft AI investment",
+    "Tesla regulation"
+  ],
+  "company_terms": {
+    "AAPL": ["Apple AI policy", "Apple supply chain", "Apple China sales"],
+    "MSFT": ["Microsoft AI investment", "Microsoft cloud regulation", "Microsoft antitrust"],
+    "NVDA": ["Nvidia export control", "Nvidia AI chip restrictions", "Nvidia China sales"],
+    "TSLA": ["Tesla EV subsidy", "Tesla autonomous driving regulation", "Tesla China sales"],
+    "2330.TW": ["TSMC capex", "TSMC Arizona policy", "TSMC export controls"],
+    "2454.TW": ["MediaTek AI chip", "MediaTek export controls"],
+    "2317.TW": ["Hon Hai India policy", "Foxconn Apple supply chain"],
+    "2303.TW": ["UMC semiconductor cycle", "UMC China policy"]
+  }
+}

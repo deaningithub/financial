@@ -1,0 +1,21 @@
+[
+  {"symbol": "^GSPC", "name": "S&P 500", "type": "index", "region": "US"},
+  {"symbol": "^NDX", "name": "Nasdaq 100", "type": "index", "region": "US"},
+  {"symbol": "^RUT", "name": "Russell 2000", "type": "index", "region": "US"},
+  {"symbol": "^VIX", "name": "CBOE Volatility Index", "type": "volatility", "region": "US"},
+  {"symbol": "DX-Y.NYB", "name": "US Dollar Index", "type": "currency", "region": "US"},
+  {"symbol": "^TNX", "name": "US 10Y Treasury Yield", "type": "rates", "region": "US"},
+  {"symbol": "GC=F", "name": "Gold Futures", "type": "commodity", "region": "Global"},
+  {"symbol": "CL=F", "name": "WTI Crude Oil Futures", "type": "commodity", "region": "Global"},
+  {"symbol": "BTC-USD", "name": "Bitcoin", "type": "crypto", "region": "Global"},
+  {"symbol": "AAPL", "name": "Apple", "type": "stock", "region": "US"},
+  {"symbol": "MSFT", "name": "Microsoft", "type": "stock", "region": "US"},
+  {"symbol": "NVDA", "name": "Nvidia", "type": "stock", "region": "US"},
+  {"symbol": "TSLA", "name": "Tesla", "type": "stock", "region": "US"},
+  {"symbol": "^TWII", "name": "TAIEX", "type": "index", "region": "Taiwan"},
+  {"symbol": "0050.TW", "name": "Yuanta Taiwan 50 ETF", "type": "etf", "region": "Taiwan"},
+  {"symbol": "2330.TW", "name": "TSMC", "type": "stock", "region": "Taiwan"},
+  {"symbol": "2454.TW", "name": "MediaTek", "type": "stock", "region": "Taiwan"},
+  {"symbol": "2317.TW", "name": "Hon Hai Precision", "type": "stock", "region": "Taiwan"},
+  {"symbol": "2303.TW", "name": "UMC", "type": "stock", "region": "Taiwan"}
+]

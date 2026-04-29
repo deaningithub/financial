@@ -1,0 +1,28 @@
+{
+  "api_keys": {
+    "openai": "your_openai_api_key_here",
+    "stock_api": "your_stock_api_key_here",
+    "news_api": "your_news_api_key_here"
+  },
+  "stocks_to_monitor": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "TSLA",
+    "META"
+  ],
+  "indices": [
+    "^GSPC",
+    "^DJI",
+    "^IXIC"
+  ],
+  "update_frequency_hours": 4,
+  "change_threshold_percent": 2.5,
+  "news_keywords": [
+    "earnings",
+    "merger",
+    "bankruptcy",
+    "dividend",
+    "stock split"
+  ]
+}

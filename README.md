@@ -149,6 +149,7 @@ Google Sheet bridge:
 - The configured sheet must be readable as CSV by this Python process. The simplest setup is sharing the sheet as "Anyone with the link can view" or publishing the `MonitorEvents` tab.
 - The daily pipeline automatically imports the sheet before loading recent monitor events.
 - A Google Apps Script template is included at `google_apps_script/realtime_monitor_trader.gs`.
+- The Apps Script project is `19z2ey5dKhGX68ED8MPfrnLHH7rtBCwgaZNq7Bvnz_nh4v78tSOFn5eIL`.
 - The Apps Script writes to `MonitorEvents` and can run on a time trigger.
 - Automated trader output is treated as paper/signal context only. The daily report will not execute orders.
 

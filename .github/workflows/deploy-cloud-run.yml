@@ -1,0 +1,141 @@
+name: Deploy Cloud Run Job
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: asia-east1
+  GAR_LOCATION: asia-east1
+  GAR_REPOSITORY: financial-system
+  JOB_NAME: financial-system
+  IMAGE_NAME: asia-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/financial-system/financial-system
+
+jobs:
+  test:
+    name: Check Python
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-cloud.txt
+
+      - name: Compile source
+        run: python -m compileall financial_system main.py
+
+  deploy:
+    name: Build and Deploy Job
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Authenticate to Google Cloud
+        shell: bash
+        run: |
+          KEY_FILE="${RUNNER_TEMP}/gcp-key.json"
+          TRIMMED_KEY="$(printf '%s' "${GCP_SA_KEY}" | sed 's/^[[:space:]]*//')"
+
+          if [[ "${TRIMMED_KEY}" == \{* ]]; then
+            printf '%s' "${GCP_SA_KEY}" > "${KEY_FILE}"
+          else
+            printf '%s' "${GCP_SA_KEY}" | base64 --decode > "${KEY_FILE}"
+          fi
+
+          gcloud auth activate-service-account --key-file="${KEY_FILE}" --quiet
+          gcloud config set project "${GCP_PROJECT_ID}" --quiet
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
+
+      - name: Ensure Artifact Registry repository
+        run: |
+          if ! gcloud artifacts repositories describe "${GAR_REPOSITORY}" \
+            --project="${GCP_PROJECT_ID}" \
+            --location="${GAR_LOCATION}" >/dev/null 2>&1; then
+            gcloud artifacts repositories create "${GAR_REPOSITORY}" \
+              --project="${GCP_PROJECT_ID}" \
+              --repository-format=docker \
+              --location="${GAR_LOCATION}" \
+              --description="Financial system Docker images" \
+              --quiet
+          fi
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy Cloud Run Job
+        run: |
+          ENV_VARS="FINANCIAL_TIMEZONE=Asia/Taipei,OPENAI_MODEL=gpt-4o,DB_USER=${DB_USER},DB_PASSWORD=${DB_PASSWORD},DB_NAME=${DB_NAME:-financial_system},OPENAI_API_KEY=${OPENAI_API_KEY},GOOGLE_SHEET_MONITOR_ENABLED=${GOOGLE_SHEET_MONITOR_ENABLED:-true},GOOGLE_SHEET_MONITOR_URL=${GOOGLE_SHEET_MONITOR_URL},GCS_BUCKET_NAME=${GCS_BUCKET_NAME:-financial-system-reports},GCS_REPORT_PREFIX=${GCS_REPORT_PREFIX:-daily_reports/},LOG_LEVEL=INFO"
+          CLOUD_SQL_FLAGS=()
+
+          if [ -n "${CLOUD_SQL_CONNECTION_NAME}" ]; then
+            ENV_VARS="${ENV_VARS},CLOUD_SQL_CONNECTION_NAME=${CLOUD_SQL_CONNECTION_NAME}"
+            CLOUD_SQL_FLAGS=(--set-cloudsql-instances="${CLOUD_SQL_CONNECTION_NAME}")
+          fi
+
+          gcloud run jobs deploy "${JOB_NAME}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --image="${IMAGE_NAME}:${GITHUB_SHA}" \
+            --tasks=1 \
+            --max-retries=1 \
+            --memory=1Gi \
+            --task-timeout=3600s \
+            --set-env-vars="${ENV_VARS}" \
+            "${CLOUD_SQL_FLAGS[@]}" \
+            --quiet
+        env:
+          CLOUD_SQL_CONNECTION_NAME: ${{ secrets.CLOUD_SQL_CONNECTION_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_SHEET_MONITOR_ENABLED: ${{ secrets.GOOGLE_SHEET_MONITOR_ENABLED }}
+          GOOGLE_SHEET_MONITOR_URL: ${{ secrets.GOOGLE_SHEET_MONITOR_URL }}
+          GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+          GCS_REPORT_PREFIX: ${{ secrets.GCS_REPORT_PREFIX }}
+
+      - name: Show deployed job
+        run: |
+          gcloud run jobs describe "${JOB_NAME}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --format="value(metadata.name,status.latestCreatedExecution.name)"

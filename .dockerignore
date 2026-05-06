@@ -1,0 +1,34 @@
+.git
+.gitignore
+.env
+.env.*
+.env.example
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.DS_Store
+.vscode
+.idea
+node_modules/
+*.log
+
+# 本地數據（重要：不要複製到容器）
+data/
+outputs/
+logs/
+*.db
+*.db-journal
+
+# 文檔
+docs/
+README*
+LICENSE

@@ -15,6 +15,7 @@ env:
   GAR_LOCATION: asia-east1
   GAR_REPOSITORY: financial-system
   JOB_NAME: financial-system
+  RUNTIME_SERVICE_ACCOUNT: financial-runner@dean-finance-report-2026.iam.gserviceaccount.com
   IMAGE_NAME: asia-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/financial-system/financial-system
 
 jobs:
@@ -119,6 +120,7 @@ jobs:
             --max-retries=1 \
             --memory=1Gi \
             --task-timeout=3600s \
+            --service-account="${RUNTIME_SERVICE_ACCOUNT}" \
             --set-env-vars="${ENV_VARS}" \
             "${CLOUD_SQL_FLAGS[@]}" \
             --quiet

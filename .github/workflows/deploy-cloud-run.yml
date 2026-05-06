@@ -67,19 +67,6 @@ jobs:
       - name: Configure Docker auth
         run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
 
-      - name: Ensure Artifact Registry repository
-        run: |
-          if ! gcloud artifacts repositories describe "${GAR_REPOSITORY}" \
-            --project="${GCP_PROJECT_ID}" \
-            --location="${GAR_LOCATION}" >/dev/null 2>&1; then
-            gcloud artifacts repositories create "${GAR_REPOSITORY}" \
-              --project="${GCP_PROJECT_ID}" \
-              --repository-format=docker \
-              --location="${GAR_LOCATION}" \
-              --description="Financial system Docker images" \
-              --quiet
-          fi
-
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:

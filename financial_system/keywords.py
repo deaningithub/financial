@@ -31,15 +31,45 @@ STOPWORDS = {
     "were",
     "with",
     "will",
+    "says",
+    "said",
+    "stock",
+    "stocks",
+    "market",
+    "markets",
+    "news",
+    "today",
+    "why",
+    "price",
+    "prices",
+    "shares",
+    "share",
+    "finance",
+    "financial",
+    "impact",
+    "policy",
+    "reason",
+    "fell",
+    "rose",
+    "gain",
+    "gains",
+    "amid",
 }
 
 
-TOKEN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9&.-]{2,}")
+TOKEN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9&.-]{2,}|[\u4e00-\u9fff]{2,}")
 
 WEIGHTED_NOTE_PATTERN = re.compile(
     r"(?P<term>[A-Za-z][A-Za-z0-9&. \-]{2,}?)\s*\[\s*(?:weight|w)\s*[:=]\s*(?P<weight>\d+)\s*\]",
     re.IGNORECASE,
 )
+
+NEWS_KEYWORD_BLOCKLIST = {
+    "impact",
+    "policy",
+    "rate policy",
+    "policy impact",
+}
 
 
 def _clean_token(token: str) -> str:
@@ -69,6 +99,16 @@ def _phrase_candidates(text: str) -> Iterable[str]:
         yield f"{words[i]} {words[i + 1]}"
 
 
+def is_trackable_news_keyword(term: str) -> bool:
+    term = _clean_token(term)
+    if not term or term in NEWS_KEYWORD_BLOCKLIST or term in STOPWORDS:
+        return False
+    parts = term.split()
+    if any(part in STOPWORDS for part in parts):
+        return False
+    return True
+
+
 def rank_keywords(text: str, limit: int = 12) -> list[tuple[str, int]]:
     if not text:
         return []
@@ -88,6 +128,27 @@ def rank_keywords(text: str, limit: int = 12) -> list[tuple[str, int]]:
             scores[term] = score
 
     return scores.most_common(limit)
+
+
+def rank_news_keywords(text: str, limit: int = 25) -> list[tuple[str, float]]:
+    """Rank recurring terms from collected headlines and search queries."""
+    if not text:
+        return []
+
+    counter = Counter(_extract_terms(text))
+    phrase_counter = Counter(_phrase_candidates(text))
+    scores: Counter[str] = Counter()
+    for term, count in counter.items():
+        scores[term] += count
+    for phrase, count in phrase_counter.items():
+        if count > 1:
+            scores[phrase] += count * 2
+
+    return [
+        (term, float(score))
+        for term, score in scores.most_common(limit)
+        if score > 0 and is_trackable_news_keyword(term)
+    ]
 
 
 def extract_keywords(text: str, limit: int = 12) -> list[str]:
@@ -111,7 +172,13 @@ def blend_keywords(
 
 
 def build_keyword_queries(keywords: list[str], max_queries: int = 8) -> list[str]:
-    return [f"{keyword} financial market news" for keyword in keywords[:max_queries]]
+    queries: list[str] = []
+    for keyword in keywords[:max_queries]:
+        if re.search(r"[\u4e00-\u9fff]", keyword):
+            queries.append(f"{keyword} 台股 新聞")
+        else:
+            queries.append(f"{keyword} financial market news")
+    return queries
 
 
 def build_policy_queries(

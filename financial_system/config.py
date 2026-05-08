@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = ROOT / "config"
-DATA_DIR = ROOT / "data"
-OUTPUT_DIR = ROOT / "outputs"
+DATA_DIR = Path(os.getenv("DATA_DIR", ROOT / "data"))
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", ROOT / "outputs"))
 SYMBOLS_FILE = CONFIG_DIR / "symbols.json"
 KEYWORD_WEIGHTS_FILE = CONFIG_DIR / "keyword_weights.json"
 POLICY_KEYWORDS_FILE = CONFIG_DIR / "policy_keywords.json"
@@ -19,6 +19,7 @@ TREND_KEYWORDS_FILE = CONFIG_DIR / "trend_keywords.json"
 TREND_MONITORS_FILE = CONFIG_DIR / "trend_monitors.json"
 NEWS_SOURCES_FILE = CONFIG_DIR / "news_sources.json"
 CORRELATION_PAIRS_FILE = CONFIG_DIR / "correlation_pairs.json"
+DAILY_TRACKING_KEYWORDS_FILE = CONFIG_DIR / "daily_tracking_keywords.json"
 DB_PATH = DATA_DIR / "financial_data.db"
 
 
@@ -45,6 +46,8 @@ class Settings:
     monitor_event_limit: int
     google_sheet_monitor_url: str | None
     google_sheet_monitor_enabled: bool
+    google_sheet_export_enabled: bool
+    google_sheet_id: str | None
     news_locales: list[str]
 
 
@@ -72,6 +75,8 @@ def load_settings() -> Settings:
         monitor_event_limit=int(os.getenv("MONITOR_EVENT_LIMIT", "20")),
         google_sheet_monitor_url=os.getenv("GOOGLE_SHEET_MONITOR_URL") or None,
         google_sheet_monitor_enabled=os.getenv("GOOGLE_SHEET_MONITOR_ENABLED", "true").lower() == "true",
+        google_sheet_export_enabled=os.getenv("GOOGLE_SHEET_EXPORT_ENABLED", "true").lower() == "true",
+        google_sheet_id=os.getenv("GOOGLE_SHEET_ID") or None,
         news_locales=[locale.strip().upper() for locale in os.getenv("NEWS_LOCALES", "US,TW").split(",") if locale.strip()],
     )
 
@@ -138,3 +143,41 @@ def load_correlation_pairs() -> list[dict]:
         return []
     with CORRELATION_PAIRS_FILE.open("r", encoding="utf-8") as file:
         return json.load(file)
+
+
+def load_daily_tracking_keywords() -> dict:
+    if not DAILY_TRACKING_KEYWORDS_FILE.exists():
+        return {"keywords": [], "search_queries": []}
+    with DAILY_TRACKING_KEYWORDS_FILE.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_daily_tracking_keyword_rows(day: str) -> list[dict]:
+    config = load_daily_tracking_keywords()
+    rows: list[dict] = []
+    for item in config.get("keywords", []):
+        term = str(item.get("term", "")).strip()
+        if not term:
+            continue
+        priority = float(item.get("priority", 3) or 3)
+        rows.append(
+            {
+                "term": term,
+                "weight": priority,
+                "first_seen_day": config.get("seed_date") or day,
+                "last_seen_day": day,
+                "appearances": 1,
+                "updated_at": config.get("seed_date") or day,
+            }
+        )
+    return rows
+
+
+def load_daily_tracking_queries(limit: int = 50) -> list[str]:
+    config = load_daily_tracking_keywords()
+    queries = [
+        str(query).strip()
+        for query in config.get("search_queries", [])
+        if str(query).strip()
+    ]
+    return queries[:limit]

@@ -5,6 +5,8 @@ from financial_system.config import (
     DATA_DIR,
     OUTPUT_DIR,
     ensure_directories,
+    load_daily_tracking_keyword_rows,
+    load_daily_tracking_queries,
     load_correlation_pairs,
     load_settings,
     load_trend_monitors,
@@ -20,9 +22,13 @@ from financial_system.database import (
     load_historical_keyword_scores,
     load_monitor_events,
     load_related_reports,
+    load_tracked_keyword_weights,
+    load_tracked_keywords,
     save_daily_report,
     save_monitor_events,
     save_risk_metrics,
+    update_tracked_keyword_weights,
+    upsert_tracked_keywords,
 )
 from financial_system.dates import today_string
 from financial_system.dynamic_weights import build_dynamic_condition_queries
@@ -31,6 +37,7 @@ from financial_system.keywords import (
     build_policy_queries,
     blend_keywords,
     rank_keywords,
+    rank_news_keywords,
 )
 from financial_system.llm import create_ai_report
 from financial_system.google_sheet_bridge import fetch_monitor_events_from_sheet
@@ -81,6 +88,26 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
     init_db()
     day = day or today_string(settings.timezone)
 
+    daily_keyword_seed = "disabled"
+    seeded_rows = load_daily_tracking_keyword_rows(day)
+    if seeded_rows:
+        try:
+            imported_seed_keywords = upsert_tracked_keywords(seeded_rows)
+            daily_keyword_seed = f"imported={imported_seed_keywords}"
+        except Exception as exc:
+            daily_keyword_seed = f"failed: {exc}"
+
+    sheet_keyword_seed = daily_keyword_seed
+    if settings.google_sheet_export_enabled and settings.google_sheet_id:
+        try:
+            from financial_system.google_sheet_exporter import fetch_tracked_keywords_from_sheet
+
+            seeded_keywords = fetch_tracked_keywords_from_sheet(settings.google_sheet_id)
+            imported_keywords = upsert_tracked_keywords(seeded_keywords)
+            sheet_keyword_seed = f"{daily_keyword_seed}; sheet_imported={imported_keywords}"
+        except Exception as exc:
+            sheet_keyword_seed = f"{daily_keyword_seed}; sheet_failed: {exc}"
+
     sheet_sync = None
     if settings.google_sheet_monitor_enabled and settings.google_sheet_monitor_url:
         try:
@@ -107,16 +134,25 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         min_score=settings.keyword_min_score,
         exclude_days={day},
     )
+    tracked_keyword_weights = load_tracked_keyword_weights(
+        limit=max(50, settings.keyword_limit + settings.keyword_secondary_limit),
+        min_weight=settings.keyword_min_score,
+    )
+    for term, score in tracked_keyword_weights.items():
+        historical_scores[term] = max(historical_scores.get(term, 0.0), score)
+    tracked_keywords = list(tracked_keyword_weights.keys())
     primary_keywords, secondary_keywords = blend_keywords(
         current_scores,
         historical_scores,
         primary_limit=settings.keyword_limit,
         secondary_limit=settings.keyword_secondary_limit,
     )
-    save_keyword_scores(day, current_scores)
-
     keyword_queries = build_keyword_queries(primary_keywords, max_queries=settings.keyword_query_limit)
     secondary_queries = build_keyword_queries(secondary_keywords, max_queries=settings.keyword_secondary_limit)
+    tracked_keyword_queries = build_keyword_queries(
+        tracked_keywords,
+        max_queries=max(50, settings.keyword_limit + settings.keyword_secondary_limit),
+    )
     trend_config = load_trend_monitors()
     long_term_alerts = evaluate_long_term_trends(trend_config, snapshots)
     long_term_trend_queries = build_long_term_trend_queries(
@@ -129,18 +165,28 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         company_limit=settings.policy_company_query_limit,
     )
     dynamic_queries = build_dynamic_condition_queries(snapshots, max_queries=8)
+    daily_tracking_queries = load_daily_tracking_queries(limit=50)
     correlations = compute_cross_market_correlations(
         load_correlation_pairs(),
         lookback_days=settings.correlation_lookback_days,
         min_abs_correlation=settings.correlation_min_abs,
     )
     anomaly_queries = build_anomaly_queries(movers)
-    queries = anomaly_queries + dynamic_queries + keyword_queries + secondary_queries + policy_queries + long_term_trend_queries
+    queries = (
+        anomaly_queries
+        + dynamic_queries
+        + keyword_queries
+        + secondary_queries
+        + tracked_keyword_queries
+        + daily_tracking_queries
+        + policy_queries
+        + long_term_trend_queries
+    )
     report_keyword_scores = _build_report_keyword_scores(
         current_scores=current_scores,
         primary_keywords=primary_keywords,
         secondary_keywords=secondary_keywords,
-        long_term_trend_queries=long_term_trend_queries,
+        long_term_trend_queries=long_term_trend_queries + daily_tracking_queries,
         policy_queries=policy_queries + dynamic_queries,
         movers=movers,
     )
@@ -157,6 +203,17 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         locales=settings.news_locales,
         source_limit=settings.source_news_limit,
     ) if queries else []
+    news_keyword_scores = rank_news_keywords(
+        "\n".join(f"{item.query}\n{item.title}" for item in news_items),
+        limit=settings.keyword_limit + settings.keyword_secondary_limit,
+    )
+    update_tracked_keyword_weights(
+        day,
+        news_keyword_scores,
+        decay=settings.keyword_decay_factor,
+        min_weight=0.25,
+    )
+    save_keyword_scores(day, current_scores + news_keyword_scores)
 
     market_path = DATA_DIR / "market_snapshots" / f"{day}.json"
     news_path = DATA_DIR / "news" / f"{day}.json"
@@ -203,10 +260,34 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         ai_report=ai_report,
         keyword_scores=report_keyword_scores,
     )
+    sheet_export = "disabled"
+    if settings.google_sheet_export_enabled and settings.google_sheet_id:
+        try:
+            from financial_system.google_sheet_exporter import export_daily_run_to_sheet
+
+            export_daily_run_to_sheet(
+                spreadsheet_id=settings.google_sheet_id,
+                day=day,
+                report_path=str(report_path),
+                report_markdown=report,
+                ai_report=ai_report,
+                sheet_monitor_sync=sheet_sync or "disabled",
+                sheet_keyword_seed=sheet_keyword_seed,
+                snapshots=snapshots,
+                news_items=news_items,
+                risk_metrics=risk_metrics,
+                keyword_scores=current_scores + news_keyword_scores,
+                tracked_keywords=load_tracked_keywords(limit=500),
+            )
+            sheet_export = f"exported={settings.google_sheet_id}"
+        except Exception as exc:
+            sheet_export = f"failed: {exc}"
 
     return {
         "report": str(report_path),
         "market_snapshot": str(market_path),
         "news": str(news_path),
         "sheet_monitor_sync": sheet_sync or "disabled",
+        "sheet_keyword_seed": sheet_keyword_seed,
+        "sheet_export": sheet_export,
     }

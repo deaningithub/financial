@@ -125,6 +125,7 @@ jobs:
           REPORT_CONTEXT_MIN: ${{ secrets.REPORT_CONTEXT_MIN }}
 
       - name: Ensure daily schedulers
+        continue-on-error: true
         run: |
           RUN_URI="https://${GCP_REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${GCP_PROJECT_ID}/jobs/${JOB_NAME}:run"
           declare -A SCHEDULES=(

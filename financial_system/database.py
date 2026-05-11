@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime, timedelta
 
 from financial_system.config import DB_PATH
+from financial_system.keywords import is_trackable_news_keyword
 from financial_system.market import MarketSnapshot
 from financial_system.monitor_bridge import MonitorEvent
 from financial_system.news import NewsItem
@@ -44,6 +45,16 @@ CREATE_TABLES_SQL = [
         term TEXT NOT NULL,
         score REAL NOT NULL,
         PRIMARY KEY(day, term)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS tracked_keywords (
+        term TEXT PRIMARY KEY,
+        weight REAL NOT NULL,
+        first_seen_day TEXT NOT NULL,
+        last_seen_day TEXT NOT NULL,
+        appearances INTEGER NOT NULL,
+        updated_at TEXT NOT NULL
     )
     """,
     """
@@ -155,6 +166,7 @@ def save_news(day: str, news_items: list[NewsItem]) -> None:
 def save_keyword_scores(day: str, keyword_scores: list[tuple[str, float]]) -> None:
     rows = [(day, term, float(score)) for term, score in keyword_scores]
     with _connect() as connection:
+        connection.execute("DELETE FROM keyword_trends WHERE day = ?", (day,))
         connection.executemany(
             "INSERT OR REPLACE INTO keyword_trends (day, term, score) VALUES (?, ?, ?)",
             rows,
@@ -214,6 +226,147 @@ def save_daily_report(
             ),
         )
         connection.commit()
+
+
+def update_tracked_keyword_weights(
+    day: str,
+    keyword_scores: list[tuple[str, float]],
+    decay: float = 0.85,
+    min_weight: float = 0.25,
+    max_weight: float = 25.0,
+) -> None:
+    """Decay older tracked keywords and boost terms that appeared in today's news."""
+    now = datetime.now().isoformat(timespec="seconds")
+    current_scores = {
+        term.strip().lower(): float(score)
+        for term, score in keyword_scores
+        if term and float(score) > 0 and is_trackable_news_keyword(term)
+    }
+    with _connect() as connection:
+        rows = connection.execute(
+            "SELECT term, weight, first_seen_day, last_seen_day, appearances FROM tracked_keywords"
+        ).fetchall()
+        existing_terms = {row["term"] for row in rows}
+        for row in rows:
+            term = row["term"]
+            if not is_trackable_news_keyword(term):
+                connection.execute("DELETE FROM tracked_keywords WHERE term = ?", (term,))
+                continue
+            boost = current_scores.get(term, 0.0)
+            same_day_update = row["last_seen_day"] == day
+            if same_day_update:
+                new_weight = max(float(row["weight"]), min(max_weight, boost)) if boost else float(row["weight"])
+            else:
+                decayed_weight = float(row["weight"]) * decay
+                new_weight = min(max_weight, decayed_weight + boost)
+            if new_weight < min_weight and not boost:
+                connection.execute("DELETE FROM tracked_keywords WHERE term = ?", (term,))
+                continue
+            connection.execute(
+                """
+                UPDATE tracked_keywords
+                SET weight = ?, last_seen_day = ?, appearances = ?, updated_at = ?
+                WHERE term = ?
+                """,
+                (
+                    new_weight,
+                    day if boost else row["last_seen_day"],
+                    int(row["appearances"]) + (1 if boost and not same_day_update else 0),
+                    now,
+                    term,
+                ),
+            )
+
+        for term, score in current_scores.items():
+            if term in existing_terms:
+                continue
+            connection.execute(
+                """
+                INSERT INTO tracked_keywords
+                    (term, weight, first_seen_day, last_seen_day, appearances, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (term, min(max_weight, score), day, day, 1, now),
+            )
+        connection.commit()
+
+
+def load_tracked_keyword_weights(
+    limit: int = 20,
+    min_weight: float = 1.0,
+) -> dict[str, float]:
+    with _connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT term, weight
+            FROM tracked_keywords
+            WHERE weight >= ?
+            ORDER BY weight DESC, last_seen_day DESC, term
+            LIMIT ?
+            """,
+            (min_weight, limit),
+        ).fetchall()
+    return {
+        row["term"]: float(row["weight"])
+        for row in rows
+        if is_trackable_news_keyword(row["term"])
+    }
+
+
+def load_tracked_keywords(limit: int = 30) -> list[dict]:
+    with _connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT term, weight, first_seen_day, last_seen_day, appearances, updated_at
+            FROM tracked_keywords
+            ORDER BY weight DESC, last_seen_day DESC, term
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [dict(row) for row in rows if is_trackable_news_keyword(row["term"])]
+
+
+def upsert_tracked_keywords(rows: list[dict]) -> int:
+    now = datetime.now().isoformat(timespec="seconds")
+    saved = 0
+    with _connect() as connection:
+        for row in rows:
+            term = str(row.get("term", "")).strip().lower()
+            if not is_trackable_news_keyword(term):
+                continue
+            try:
+                weight = float(row.get("weight", 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            if weight <= 0:
+                continue
+            first_seen_day = str(row.get("first_seen_day") or row.get("last_seen_day") or "").strip()
+            last_seen_day = str(row.get("last_seen_day") or first_seen_day).strip()
+            if not first_seen_day or not last_seen_day:
+                continue
+            try:
+                appearances = int(float(row.get("appearances", 1) or 1))
+            except (TypeError, ValueError):
+                appearances = 1
+            updated_at = str(row.get("updated_at") or now)
+            connection.execute(
+                """
+                INSERT INTO tracked_keywords
+                    (term, weight, first_seen_day, last_seen_day, appearances, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(term) DO UPDATE SET
+                    weight = excluded.weight,
+                    first_seen_day = excluded.first_seen_day,
+                    last_seen_day = excluded.last_seen_day,
+                    appearances = excluded.appearances,
+                    updated_at = excluded.updated_at
+                """,
+                (term, weight, first_seen_day, last_seen_day, appearances, updated_at),
+            )
+            saved += 1
+        connection.commit()
+    return saved
 
 
 def save_risk_metrics(day: str, metrics: list[RiskMetrics]) -> None:
@@ -388,3 +541,40 @@ def load_related_reports(
             if len(selected) >= min_reports:
                 break
     return selected
+
+
+def load_previous_report(day: str, lookback_days: int = 45) -> dict | None:
+    cutoff = datetime.utcnow().date() - timedelta(days=lookback_days)
+    with _connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT day, report_markdown, ai_report, keyword_scores_json, created_at
+            FROM daily_reports
+            WHERE day < ?
+            ORDER BY day DESC
+            """,
+            (day,),
+        ).fetchall()
+
+    for row in rows:
+        try:
+            day_date = datetime.strptime(row["day"], "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if day_date < cutoff:
+            continue
+        try:
+            historical_terms = json.loads(row["keyword_scores_json"])
+        except json.JSONDecodeError:
+            historical_terms = {}
+        return {
+            "day": row["day"],
+            "report_markdown": row["report_markdown"],
+            "ai_report": row["ai_report"],
+            "keyword_scores": historical_terms,
+            "relevance": 0.0,
+            "matched_terms": ["previous report"],
+            "created_at": row["created_at"],
+            "context_role": "previous_report",
+        }
+    return None

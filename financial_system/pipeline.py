@@ -21,6 +21,7 @@ from financial_system.database import (
     save_keyword_scores,
     load_historical_keyword_scores,
     load_monitor_events,
+    load_previous_report,
     load_related_reports,
     load_tracked_keyword_weights,
     load_tracked_keywords,
@@ -46,6 +47,7 @@ from financial_system.news import collect_news, save_news
 from financial_system.notes import read_notes
 from financial_system.report import render_report, save_report
 from financial_system.risk_analyzer import calculate_risk_metrics
+from financial_system.storage import backup_database_to_gcs, restore_database_from_gcs, upload_report_to_gcs
 from financial_system.trend_monitor import (
     build_long_term_trend_queries,
     evaluate_long_term_trends,
@@ -85,6 +87,7 @@ def _build_report_keyword_scores(
 def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str, str]:
     ensure_directories()
     settings = load_settings()
+    gcs_db_restore = restore_database_from_gcs()
     init_db()
     day = day or today_string(settings.timezone)
 
@@ -182,6 +185,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         + policy_queries
         + long_term_trend_queries
     )
+    queries = list(dict.fromkeys(query for query in queries if query))[: settings.news_query_limit]
     report_keyword_scores = _build_report_keyword_scores(
         current_scores=current_scores,
         primary_keywords=primary_keywords,
@@ -196,10 +200,18 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         lookback_days=settings.report_context_lookback_days,
         exclude_days={day},
     )
+    previous_report = load_previous_report(
+        day,
+        lookback_days=settings.report_context_lookback_days,
+    )
+    if previous_report:
+        related_reports = [previous_report] + [
+            report for report in related_reports if report.get("day") != previous_report.get("day")
+        ]
     news_items = collect_news(
         queries,
-        limit_per_query=4,
-        max_age_days=14,
+        limit_per_query=settings.news_limit_per_query,
+        max_age_days=settings.news_max_age_days,
         locales=settings.news_locales,
         source_limit=settings.source_news_limit,
     ) if queries else []
@@ -241,6 +253,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
             correlations=correlations,
             risk_metrics=risk_metrics,
             monitor_events=monitor_events,
+            target_words=settings.report_target_words,
         )
 
     report = render_report(
@@ -260,6 +273,8 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         ai_report=ai_report,
         keyword_scores=report_keyword_scores,
     )
+    gcs_report_upload = upload_report_to_gcs(report_path, day)
+    gcs_db_backup = backup_database_to_gcs()
     sheet_export = "disabled"
     if settings.google_sheet_export_enabled and settings.google_sheet_id:
         try:
@@ -287,6 +302,9 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         "report": str(report_path),
         "market_snapshot": str(market_path),
         "news": str(news_path),
+        "gcs_db_restore": gcs_db_restore,
+        "gcs_db_backup": gcs_db_backup,
+        "gcs_report_upload": gcs_report_upload,
         "sheet_monitor_sync": sheet_sync or "disabled",
         "sheet_keyword_seed": sheet_keyword_seed,
         "sheet_export": sheet_export,

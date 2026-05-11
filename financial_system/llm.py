@@ -19,6 +19,7 @@ Rules:
 - Do not invent causes. If a cause is only suggested by headlines, label it as a likely driver.
 - Separate facts, interpretation, and risk assessment.
 - Use related historical reports as context, but do not treat old information as today's fact.
+- Use the immediately previous report as continuity context. Repeat only still-important points; skip background that was already explained and is no longer central.
 - Clearly identify whether today's market action continues or reverses themes from related historical reports.
 - Make the daily report primarily about short-term international political and economic conditions.
 - Treat long-term themes as monitored background. Discuss them in detail only when a monitor alert is provided.
@@ -56,8 +57,10 @@ def _historical_report_lines(related_reports: list[dict]) -> str:
         ai_report = report.get("ai_report") or report.get("report_markdown") or ""
         excerpt = ai_report.strip().replace("\r\n", "\n")[:2200]
         matched_terms = ", ".join(report.get("matched_terms") or [])
+        context_role = report.get("context_role") or "related_report"
         blocks.append(
             f"Date: {report.get('day')}\n"
+            f"Context role: {context_role}\n"
             f"Relevance score: {report.get('relevance', 0):.2f}\n"
             f"Matched keywords: {matched_terms or 'fallback recent report'}\n"
             f"Report excerpt:\n{excerpt}"
@@ -78,6 +81,7 @@ def create_ai_report(
     correlations: list[CorrelationResult] | None = None,
     risk_metrics: list[RiskMetrics] | None = None,
     monitor_events: list[MonitorEvent] | None = None,
+    target_words: int = 1500,
 ) -> str:
     client = OpenAI(api_key=api_key)
     mover_names = ", ".join(
@@ -99,7 +103,7 @@ Biggest movers:
 Collected news:
 {_news_lines(news_items) or "No news collected."}
 
-Related historical reports selected by weighted keyword relevance:
+Previous and related historical reports:
 {_historical_report_lines(related_reports or [])}
 
 Long-term trend monitor status:
@@ -116,11 +120,15 @@ Cross-market correlation analysis:
 
 Write in English.
 
-Use the related historical reports first to establish context:
+Target length: about {target_words} English words. Prefer concise paragraphs and avoid restating non-essential background.
+
+Use the previous and related historical reports first to establish context:
+- Treat any report marked "previous report" as the immediate narrative continuation point.
 - Which themes are continuing?
 - Which themes are reversing?
 - Which old risks still matter today?
-- Reference at least 3 historical reports when the system provides them. If fewer than 3 are available, state that the database has insufficient historical reports.
+- Re-mention important prior points only when they are still material today. If an older point is no longer central, skip it.
+- Reference historical reports when the system provides them. If the previous report is unavailable, state that continuity context is unavailable.
 
 The daily report should focus on short-term international political and economic conditions: rates, inflation, oil, currencies, geopolitics, policy changes, earnings, and cross-market risk appetite.
 Use the cross-market correlation analysis to identify synchronized risk-on/risk-off behavior or unusual divergence across the U.S., Taiwan, Europe, China/Hong Kong, Japan, India, commodities, yields, and currencies.
@@ -135,17 +143,13 @@ The following long-term framework should be treated as a monitoring layer, not t
 
 Only discuss a long-term trend in detail if the long-term trend monitor status shows an alert or if today's news has a direct market-moving catalyst. Otherwise, summarize it briefly as "no major threshold event today."
 
-Write the daily financial summary and risk assessment with these sections:
+Write the daily financial summary and risk assessment with these concise sections:
 1. Executive summary
-2. Historical context and continuation/reversal
+2. Continuation from the previous report
 3. Biggest moves and likely drivers
 4. Taiwan market status
 5. Short-term political and economic situation
-6. Cross-market correlation and divergence
-7. Political and company policy watch
-8. Long-term trend monitor status
-9. Risk assessment
-10. What to monitor next
+6. Risk assessment and what to monitor next
 """
     response = client.responses.create(
         model=model,

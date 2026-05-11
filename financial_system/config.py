@@ -42,6 +42,10 @@ class Settings:
     correlation_lookback_days: int
     correlation_min_abs: float
     source_news_limit: int
+    news_query_limit: int
+    news_limit_per_query: int
+    news_max_age_days: int
+    report_target_words: int
     monitor_event_lookback_hours: int
     monitor_event_limit: int
     google_sheet_monitor_url: str | None
@@ -71,6 +75,10 @@ def load_settings() -> Settings:
         correlation_lookback_days=int(os.getenv("CORRELATION_LOOKBACK_DAYS", "90")),
         correlation_min_abs=float(os.getenv("CORRELATION_MIN_ABS", "0.45")),
         source_news_limit=int(os.getenv("SOURCE_NEWS_LIMIT", "20")),
+        news_query_limit=int(os.getenv("NEWS_QUERY_LIMIT", "18")),
+        news_limit_per_query=int(os.getenv("NEWS_LIMIT_PER_QUERY", "2")),
+        news_max_age_days=int(os.getenv("NEWS_MAX_AGE_DAYS", "7")),
+        report_target_words=int(os.getenv("REPORT_TARGET_WORDS", "1500")),
         monitor_event_lookback_hours=int(os.getenv("MONITOR_EVENT_LOOKBACK_HOURS", "36")),
         monitor_event_limit=int(os.getenv("MONITOR_EVENT_LIMIT", "20")),
         google_sheet_monitor_url=os.getenv("GOOGLE_SHEET_MONITOR_URL") or None,

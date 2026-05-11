@@ -7,7 +7,15 @@ from types import SimpleNamespace
 from financial_system.config import DATA_DIR, ensure_directories, load_trend_monitors, read_symbols, write_symbols
 from financial_system.dates import today_string
 from financial_system.config import load_settings
-from financial_system.database import init_db, load_historical_keyword_scores, load_monitor_events, save_monitor_event, save_monitor_events
+from financial_system.database import (
+    init_db,
+    load_historical_keyword_scores,
+    load_monitor_events,
+    load_tracked_keyword_weights,
+    load_tracked_keywords,
+    save_monitor_event,
+    save_monitor_events,
+)
 from financial_system.google_sheet_bridge import fetch_monitor_events_from_sheet
 from financial_system.keywords import build_keyword_queries, build_policy_queries, blend_keywords, rank_keywords
 from financial_system.monitor_bridge import MonitorEvent, format_monitor_events
@@ -67,6 +75,12 @@ def _cmd_inspect_keywords(args: argparse.Namespace) -> None:
         min_score=settings.keyword_min_score,
         exclude_days={day},
     )
+    tracked_keyword_weights = load_tracked_keyword_weights(
+        limit=max(50, (args.limit or settings.keyword_limit) + (args.secondary_limit or settings.keyword_secondary_limit)),
+        min_weight=settings.keyword_min_score,
+    )
+    for term, score in tracked_keyword_weights.items():
+        historical_scores[term] = max(historical_scores.get(term, 0.0), score)
     primary_keywords, secondary_keywords = blend_keywords(
         ranked,
         historical_scores,
@@ -75,6 +89,10 @@ def _cmd_inspect_keywords(args: argparse.Namespace) -> None:
     )
     primary_queries = build_keyword_queries(primary_keywords, max_queries=args.query_limit or settings.keyword_query_limit)
     secondary_queries = build_keyword_queries(secondary_keywords, max_queries=args.secondary_limit or settings.keyword_secondary_limit)
+    tracked_queries = build_keyword_queries(
+        list(tracked_keyword_weights.keys()),
+        max_queries=max(50, (args.limit or settings.keyword_limit) + (args.secondary_limit or settings.keyword_secondary_limit)),
+    )
     symbol_snapshots = [
         SimpleNamespace(
             symbol=item["symbol"],
@@ -107,6 +125,20 @@ def _cmd_inspect_keywords(args: argparse.Namespace) -> None:
         print("Secondary search queries:")
         for query in secondary_queries:
             print(f"- {query}")
+
+    if tracked_queries:
+        print("Tracked keyword search queries:")
+        for query in tracked_queries:
+            print(f"- {query}")
+
+    tracked_keywords = load_tracked_keywords(limit=args.limit or settings.keyword_limit)
+    if tracked_keywords:
+        print("Tracked news keyword weights:")
+        for item in tracked_keywords:
+            print(
+                f"- {item['term']}: weight={item['weight']:.2f}, "
+                f"last_seen={item['last_seen_day']}, appearances={item['appearances']}"
+            )
 
     if policy_queries:
         print("Policy search queries:")
@@ -248,3 +280,7 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     args.func(args)
+
+
+if __name__ == "__main__":
+    main()

@@ -17,6 +17,8 @@ env:
   JOB_NAME: financial-system
   RUNTIME_SERVICE_ACCOUNT: financial-runner@dean-finance-report-2026.iam.gserviceaccount.com
   IMAGE_NAME: asia-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/financial-system/financial-system
+  SCHEDULER_JOB_PREFIX: financial-system
+  SCHEDULER_TIME_ZONE: Asia/Taipei
 
 jobs:
   test:
@@ -83,7 +85,7 @@ jobs:
 
       - name: Deploy Cloud Run Job
         run: |
-          ENV_VARS="FINANCIAL_TIMEZONE=Asia/Taipei,OPENAI_MODEL=gpt-4o,DB_USER=${DB_USER},DB_PASSWORD=${DB_PASSWORD},DB_NAME=${DB_NAME:-financial_system},OPENAI_API_KEY=${OPENAI_API_KEY},GOOGLE_SHEET_MONITOR_ENABLED=${GOOGLE_SHEET_MONITOR_ENABLED:-true},GOOGLE_SHEET_MONITOR_URL=${GOOGLE_SHEET_MONITOR_URL},GCS_BUCKET_NAME=${GCS_BUCKET_NAME:-financial-system-reports},GCS_REPORT_PREFIX=${GCS_REPORT_PREFIX:-daily_reports/},LOG_LEVEL=INFO"
+          ENV_VARS="FINANCIAL_TIMEZONE=Asia/Taipei,OPENAI_MODEL=gpt-4o,DB_USER=${DB_USER},DB_PASSWORD=${DB_PASSWORD},DB_NAME=${DB_NAME:-financial_system},OPENAI_API_KEY=${OPENAI_API_KEY},GOOGLE_SHEET_MONITOR_ENABLED=${GOOGLE_SHEET_MONITOR_ENABLED:-true},GOOGLE_SHEET_MONITOR_URL=${GOOGLE_SHEET_MONITOR_URL},GOOGLE_SHEET_EXPORT_ENABLED=${GOOGLE_SHEET_EXPORT_ENABLED:-true},GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:-1_w31qxAogDkc8_Dtm8aLBH53uhAZYf7e-IFm5NMombA},GCS_BUCKET_NAME=${GCS_BUCKET_NAME:-financial-system-reports},GCS_REPORT_PREFIX=${GCS_REPORT_PREFIX:-daily_reports/},REPORT_TARGET_WORDS=${REPORT_TARGET_WORDS:-1500},NEWS_QUERY_LIMIT=${NEWS_QUERY_LIMIT:-18},NEWS_LIMIT_PER_QUERY=${NEWS_LIMIT_PER_QUERY:-2},NEWS_MAX_AGE_DAYS=${NEWS_MAX_AGE_DAYS:-7},SOURCE_NEWS_LIMIT=${SOURCE_NEWS_LIMIT:-12},REPORT_CONTEXT_MIN=${REPORT_CONTEXT_MIN:-2},LOG_LEVEL=INFO"
           CLOUD_SQL_FLAGS=()
 
           if [ -n "${CLOUD_SQL_CONNECTION_NAME}" ]; then
@@ -111,8 +113,60 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_SHEET_MONITOR_ENABLED: ${{ secrets.GOOGLE_SHEET_MONITOR_ENABLED }}
           GOOGLE_SHEET_MONITOR_URL: ${{ secrets.GOOGLE_SHEET_MONITOR_URL }}
+          GOOGLE_SHEET_EXPORT_ENABLED: ${{ secrets.GOOGLE_SHEET_EXPORT_ENABLED }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
           GCS_REPORT_PREFIX: ${{ secrets.GCS_REPORT_PREFIX }}
+          REPORT_TARGET_WORDS: ${{ secrets.REPORT_TARGET_WORDS }}
+          NEWS_QUERY_LIMIT: ${{ secrets.NEWS_QUERY_LIMIT }}
+          NEWS_LIMIT_PER_QUERY: ${{ secrets.NEWS_LIMIT_PER_QUERY }}
+          NEWS_MAX_AGE_DAYS: ${{ secrets.NEWS_MAX_AGE_DAYS }}
+          SOURCE_NEWS_LIMIT: ${{ secrets.SOURCE_NEWS_LIMIT }}
+          REPORT_CONTEXT_MIN: ${{ secrets.REPORT_CONTEXT_MIN }}
+
+      - name: Ensure daily schedulers
+        run: |
+          RUN_URI="https://${GCP_REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${GCP_PROJECT_ID}/jobs/${JOB_NAME}:run"
+          declare -A SCHEDULES=(
+            ["${SCHEDULER_JOB_PREFIX}-0900"]="0 9 * * *"
+            ["${SCHEDULER_JOB_PREFIX}-1130"]="30 11 * * *"
+            ["${SCHEDULER_JOB_PREFIX}-1400"]="0 14 * * *"
+          )
+
+          for SCHEDULER_JOB_NAME in "${!SCHEDULES[@]}"; do
+            SCHEDULER_SCHEDULE="${SCHEDULES[$SCHEDULER_JOB_NAME]}"
+            if gcloud scheduler jobs describe "${SCHEDULER_JOB_NAME}" --project="${GCP_PROJECT_ID}" --location="${GCP_REGION}" >/dev/null 2>&1; then
+              gcloud scheduler jobs update http "${SCHEDULER_JOB_NAME}" \
+                --project="${GCP_PROJECT_ID}" \
+                --location="${GCP_REGION}" \
+                --schedule="${SCHEDULER_SCHEDULE}" \
+                --time-zone="${SCHEDULER_TIME_ZONE}" \
+                --uri="${RUN_URI}" \
+                --http-method=POST \
+                --oauth-service-account-email="${RUNTIME_SERVICE_ACCOUNT}" \
+                --oauth-token-scope="https://www.googleapis.com/auth/cloud-platform" \
+                --quiet
+            else
+              gcloud scheduler jobs create http "${SCHEDULER_JOB_NAME}" \
+                --project="${GCP_PROJECT_ID}" \
+                --location="${GCP_REGION}" \
+                --schedule="${SCHEDULER_SCHEDULE}" \
+                --time-zone="${SCHEDULER_TIME_ZONE}" \
+                --uri="${RUN_URI}" \
+                --http-method=POST \
+                --oauth-service-account-email="${RUNTIME_SERVICE_ACCOUNT}" \
+                --oauth-token-scope="https://www.googleapis.com/auth/cloud-platform" \
+                --quiet
+            fi
+          done
+
+          LEGACY_SCHEDULER_JOB_NAME="${SCHEDULER_JOB_PREFIX}-daily"
+          if gcloud scheduler jobs describe "${LEGACY_SCHEDULER_JOB_NAME}" --project="${GCP_PROJECT_ID}" --location="${GCP_REGION}" >/dev/null 2>&1; then
+            gcloud scheduler jobs delete "${LEGACY_SCHEDULER_JOB_NAME}" \
+              --project="${GCP_PROJECT_ID}" \
+              --location="${GCP_REGION}" \
+              --quiet
+          fi
 
       - name: Show deployed job
         run: |

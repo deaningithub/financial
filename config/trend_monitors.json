@@ -1,35 +1,105 @@
 {
-  "AI chips": {
-    "keywords": ["AI chips", "GPU supply chain", "HBM memory", "advanced packaging", "CoWoS", "data center capex"],
-    "symbols": ["NVDA", "MSFT", "2330.TW", "2454.TW", "0050.TW"],
+  "AI compute and accelerators": {
+    "keywords": ["AI accelerators", "GPU supply chain", "custom AI ASIC", "AI inference chip", "AI server motherboard", "liquid cooled AI server"],
+    "symbols": ["NVDA", "AMD", "AVGO", "ARM", "TSM", "2330.TW", "MSFT", "GOOGL", "META", "SMCI", "DELL", "3231.TW", "2382.TW", "6669.TW"],
+    "daily_threshold_pct": 2.0,
+    "five_day_threshold_pct": 6.0,
+    "one_month_threshold_pct": 15.0
+  },
+  "AI memory and advanced packaging": {
+    "keywords": ["HBM memory", "HBM4", "advanced packaging", "CoWoS", "chiplet packaging", "glass substrate", "silicon photonics"],
+    "symbols": ["MU", "TSM", "2330.TW", "ASML", "AMAT", "LRCX", "KLAC", "3443.TW", "3711.TW", "3017.TW", "3037.TW"],
+    "daily_threshold_pct": 2.0,
+    "five_day_threshold_pct": 6.0,
+    "one_month_threshold_pct": 15.0
+  },
+  "AI software and applications": {
+    "keywords": ["AI agents", "enterprise AI adoption", "sovereign AI", "multimodal AI", "AI cybersecurity", "AI data platform", "model serving"],
+    "symbols": ["MSFT", "GOOGL", "AMZN", "META", "ORCL", "PLTR", "SNOW", "CRWD", "PANW"],
+    "daily_threshold_pct": 2.0,
+    "five_day_threshold_pct": 6.0,
+    "one_month_threshold_pct": 15.0
+  },
+  "US big tech Taiwan investment and orders": {
+    "keywords": ["Apple orders", "iPhone build plan", "Apple TSMC orders", "US big tech Taiwan investment", "hyperscaler Taiwan investment", "Taiwan data center investment", "TSMC customer order outlook", "Taiwan supplier order momentum"],
+    "symbols": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSM", "2330.TW", "2317.TW", "4938.TW", "3008.TW", "2382.TW", "6669.TW", "2308.TW", "3231.TW"],
+    "daily_threshold_pct": 2.0,
+    "five_day_threshold_pct": 6.0,
+    "one_month_threshold_pct": 15.0
+  },
+  "US macro, rates, and credit": {
+    "keywords": ["nonfarm payrolls", "US jobs report", "CPI inflation", "PCE inflation", "Treasury yields", "yield curve", "credit spreads", "Federal Reserve policy"],
+    "symbols": ["^IRX", "^FVX", "^TNX", "^TYX", "TLT", "HYG", "LQD", "DX-Y.NYB", "^GSPC", "^NDX", "^RUT"],
+    "daily_threshold_pct": 1.0,
+    "five_day_threshold_pct": 3.0,
+    "one_month_threshold_pct": 8.0
+  },
+  "FX and Asia currency pressure": {
+    "keywords": ["US dollar", "USDJPY", "USDKRW", "USDTWD", "yen intervention", "Korea won pressure", "China yuan fixing", "currency volatility"],
+    "symbols": ["DX-Y.NYB", "JPY=X", "KRW=X", "TWD=X", "CNY=X", "EURUSD=X", "^N225", "^KS11", "^TWII"],
+    "daily_threshold_pct": 0.8,
+    "five_day_threshold_pct": 2.5,
+    "one_month_threshold_pct": 6.0
+  },
+  "Japan and Korea market leadership": {
+    "keywords": ["Japan equities", "Korea equities", "BOJ policy", "Bank of Korea policy", "Korea semiconductor exports", "Japan semiconductor equipment", "Japan defense budget", "Korea defense exports"],
+    "symbols": ["^N225", "^TOPX", "^KS11", "^KQ11", "8035.T", "6857.T", "6146.T", "7011.T", "005930.KS", "000660.KS", "012450.KS", "064350.KS"],
     "daily_threshold_pct": 2.0,
     "five_day_threshold_pct": 6.0,
     "one_month_threshold_pct": 15.0
   },
   "satellite communications": {
-    "keywords": ["satellite communications", "low earth orbit satellites", "Starlink", "satellite supply chain", "space internet"],
-    "symbols": ["TSLA"],
+    "keywords": ["satellite communications", "low earth orbit satellites", "LEO constellation", "5G NTN", "Direct to Device satellite", "Starlink", "Project Kuiper", "satellite broadband"],
+    "symbols": ["ASTS", "GSAT", "IRDM", "VSAT", "RKLB", "LUNR", "TSLA", "AMZN", "2412.TW"],
+    "daily_threshold_pct": 2.5,
+    "five_day_threshold_pct": 8.0,
+    "one_month_threshold_pct": 18.0
+  },
+  "satellite supply chain": {
+    "keywords": ["satellite payload", "phased array antenna", "ground station", "satellite bus", "inter-satellite link", "space-grade FPGA", "SAR satellite", "earth observation"],
+    "symbols": ["LMT", "NOC", "RTX", "BA", "RKLB", "MDA.TO", "HON", "GRMN", "2317.TW", "2454.TW"],
+    "daily_threshold_pct": 2.5,
+    "five_day_threshold_pct": 8.0,
+    "one_month_threshold_pct": 18.0
+  },
+  "optical communications": {
+    "keywords": ["800G optical transceiver", "1.6T optical module", "co-packaged optics", "CPO", "linear drive pluggable optics", "silicon photonics", "AI data center interconnect"],
+    "symbols": ["AVGO", "MRVL", "COHR", "LITE", "CIEN", "ANET", "CSCO", "FN", "300308.SZ", "3163.TW", "4979.TW"],
     "daily_threshold_pct": 2.5,
     "five_day_threshold_pct": 8.0,
     "one_month_threshold_pct": 18.0
   },
   "robotics and automation": {
-    "keywords": ["humanoid robots", "industrial robots", "automation equipment", "servo motors", "edge AI"],
-    "symbols": ["NVDA", "TSLA", "2454.TW", "2317.TW"],
+    "keywords": ["humanoid robots", "embodied AI", "industrial robots", "cobots", "factory automation", "servo motors", "harmonic reducers", "edge AI robotics"],
+    "symbols": ["NVDA", "TSLA", "ISRG", "ROK", "TER", "ABBNY", "FANUY", "6861.T", "6954.T", "6506.T", "2454.TW", "2317.TW", "2308.TW"],
     "daily_threshold_pct": 2.5,
     "five_day_threshold_pct": 8.0,
     "one_month_threshold_pct": 18.0
   },
-  "vehicle technology": {
-    "keywords": ["electric vehicles", "autonomous driving", "automotive semiconductors", "charging infrastructure", "battery supply chain"],
-    "symbols": ["TSLA", "NVDA", "2454.TW", "2303.TW"],
+  "robotics components": {
+    "keywords": ["robot actuator", "joint module", "dexterous hand", "force torque sensor", "machine vision", "motion controller", "robot battery", "robot operating system"],
+    "symbols": ["NVDA", "TSLA", "TER", "KEYS", "CGNX", "6645.TW", "2049.TW", "1590.TW", "2308.TW", "1519.TW"],
     "daily_threshold_pct": 2.5,
     "five_day_threshold_pct": 8.0,
     "one_month_threshold_pct": 18.0
   },
-  "space exploration and moon landing": {
-    "keywords": ["moon landing program", "lunar base", "space exploration", "rocket launch", "aerospace supply chain"],
-    "symbols": ["TSLA"],
+  "energy infrastructure": {
+    "keywords": ["AI data center power", "grid equipment", "power transformer", "switchgear", "microgrid", "battery energy storage", "solar inverter", "renewable power purchase agreement"],
+    "symbols": ["NEE", "CEG", "GEV", "ETN", "PWR", "FLNC", "ENPH", "FSLR", "2308.TW", "1519.TW", "1513.TW", "1503.TW", "1514.TW"],
+    "daily_threshold_pct": 2.0,
+    "five_day_threshold_pct": 7.0,
+    "one_month_threshold_pct": 16.0
+  },
+  "nuclear and clean power": {
+    "keywords": ["small modular reactor", "nuclear power restart", "uranium supply", "clean hydrogen", "fuel cell", "carbon capture", "geothermal power", "long duration energy storage"],
+    "symbols": ["CEG", "CCJ", "URA", "SMR", "OKLO", "BE", "PLUG", "FCEL", "XOM"],
+    "daily_threshold_pct": 2.5,
+    "five_day_threshold_pct": 8.0,
+    "one_month_threshold_pct": 18.0
+  },
+  "future trend watch": {
+    "keywords": ["quantum computing", "spatial computing", "AR glasses", "biotech AI", "synthetic biology", "autonomous driving", "solid state battery", "next generation internet"],
+    "symbols": ["IONQ", "RGTI", "QUBT", "QBTS", "AAPL", "META", "ISRG", "DNA", "RXRX", "TSLA", "QS"],
     "daily_threshold_pct": 3.0,
     "five_day_threshold_pct": 10.0,
     "one_month_threshold_pct": 20.0

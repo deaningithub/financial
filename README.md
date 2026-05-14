@@ -83,6 +83,15 @@ Output appears in:
 The news search includes market anomalies, your weighted notes, historical secondary keywords, and political/company policy keywords. Long-term theme searches are only added when a monitored long-term trend crosses an attention threshold.
 Each generated daily report is also saved into SQLite. Future reports use weighted keyword similarity to load at least three related historical reports as context, falling back to recent reports only when related matches are unavailable.
 
+## Cloud Run Job Schedule
+
+The deployed Cloud Run Job is `financial-system` in `asia-east1`.
+Cloud Scheduler runs it three times per day in the `Asia/Taipei` timezone:
+
+- `08:45`
+- `11:30`
+- `14:00`
+
 ## Useful Commands
 
 Show configured symbols:
@@ -103,11 +112,34 @@ Run without OpenAI, keeping the market/news collection:
 python main.py run --no-ai
 ```
 
+## Taiwan Stock Valuation
+
+Taiwan stock valuation research uses a separate local SQLite database:
+
+```text
+data/taiwan_stock_valuation.db
+```
+
+Initialize, calculate valuation, run the five-round LLM research workflow, and read reports:
+
+```powershell
+python main.py taiwan-stocks init
+python main.py taiwan-stocks calc-valuation --stock-id 2409 --calc-date 2026-05-11
+python main.py taiwan-stocks run-research --stock-id 2409 --report-date 2026-05-11
+python main.py taiwan-stocks show-report --stock-id 2409 --summary
+python main.py taiwan-stocks show-rounds --stock-id 2409 --details
+```
+
+Full instructions are in `README_TAIWAN_STOCK_VALUATION.md`.
+
+For deployment, set `OPENAI_API_KEY` as an environment variable or GitHub Actions secret. The Cloud Run Job workflow passes it into the runtime automatically.
+
 ## Configuration
 
 Edit `config/symbols.json` to track the financial numbers you care about.
 Edit `config/policy_keywords.json` to track political policy or company policy terms that can affect stocks.
 Edit `config/trend_monitors.json` to track long-term themes such as AI chips, satellite communications, robotics/vehicles, and space exploration. These themes are monitored daily but only promoted into the report when their tracked symbols move enough.
+The current monitoring scope also includes US macro data such as nonfarm payrolls, CPI/PCE, ISM, retail sales, Treasury yields, credit spreads, White House policy, Pentagon procurement and defense policy, major FX pairs, Japan and Korea market/industry data, Apple order signals that can affect TSMC and Taiwan suppliers, and US big tech investment/order flow into Taiwan.
 
 The default list includes:
 
@@ -116,14 +148,18 @@ The default list includes:
 - Russell 2000
 - VIX
 - US Dollar Index
-- 10Y Treasury yield proxy
+- US Treasury yield curve, long bond ETF, and credit ETFs
+- Major FX pairs: USD/JPY, USD/KRW, USD/TWD, USD/CNY, EUR/USD
 - Gold
 - Oil
 - Bitcoin
 - A few large US stocks
 - Sector representatives for healthcare, financials, energy, and consumer
 - Europe, China, Hong Kong, Japan, and India index coverage
+- Japan market coverage: Nikkei 225, TOPIX, semiconductor equipment, defense, banks, autos, and consumer leaders
+- Korea market coverage: KOSPI, KOSDAQ, semiconductors, batteries, autos, defense, robotics, and internet leaders
 - Taiwan market status: TAIEX, Taiwan 50 ETF, TSMC, MediaTek, Hon Hai, UMC
+- Cross-border customer and investment chain: Apple orders, iPhone build plans, TSMC customer order outlook, US big tech Taiwan investment, hyperscaler data center/cloud region investment, and Taiwan suppliers receiving these orders
 
 The pipeline also creates dynamic short-term condition queries from market state, such as VIX stress, oil shocks, dollar/yield moves, and regional index selloffs or rallies.
 
@@ -182,6 +218,7 @@ Policy search settings:
 - `CORRELATION_LOOKBACK_DAYS=90`
 - `CORRELATION_MIN_ABS=0.45`
 - `SOURCE_NEWS_LIMIT=20`
+- `NEWS_LOCALES=US,TW,JP,KR`
 
 ## Notes
 

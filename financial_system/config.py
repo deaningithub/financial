@@ -21,6 +21,7 @@ NEWS_SOURCES_FILE = CONFIG_DIR / "news_sources.json"
 CORRELATION_PAIRS_FILE = CONFIG_DIR / "correlation_pairs.json"
 DAILY_TRACKING_KEYWORDS_FILE = CONFIG_DIR / "daily_tracking_keywords.json"
 DB_PATH = DATA_DIR / "financial_data.db"
+TAIWAN_STOCK_VALUATION_DB_PATH = DATA_DIR / "taiwan_stock_valuation.db"
 
 
 @dataclass(frozen=True)
@@ -85,7 +86,7 @@ def load_settings() -> Settings:
         google_sheet_monitor_enabled=os.getenv("GOOGLE_SHEET_MONITOR_ENABLED", "true").lower() == "true",
         google_sheet_export_enabled=os.getenv("GOOGLE_SHEET_EXPORT_ENABLED", "true").lower() == "true",
         google_sheet_id=os.getenv("GOOGLE_SHEET_ID") or None,
-        news_locales=[locale.strip().upper() for locale in os.getenv("NEWS_LOCALES", "US,TW").split(",") if locale.strip()],
+        news_locales=[locale.strip().upper() for locale in os.getenv("NEWS_LOCALES", "US,TW,JP,KR").split(",") if locale.strip()],
     )
 
 

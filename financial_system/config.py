@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -86,7 +87,11 @@ def load_settings() -> Settings:
         google_sheet_monitor_enabled=os.getenv("GOOGLE_SHEET_MONITOR_ENABLED", "true").lower() == "true",
         google_sheet_export_enabled=os.getenv("GOOGLE_SHEET_EXPORT_ENABLED", "true").lower() == "true",
         google_sheet_id=os.getenv("GOOGLE_SHEET_ID") or None,
-        news_locales=[locale.strip().upper() for locale in os.getenv("NEWS_LOCALES", "US,TW,JP,KR").split(",") if locale.strip()],
+        news_locales=[
+            locale.strip().upper()
+            for locale in re.split(r"[,;|]", os.getenv("NEWS_LOCALES", "US,TW,JP,KR"))
+            if locale.strip()
+        ],
     )
 
 

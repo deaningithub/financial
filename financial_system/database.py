@@ -228,6 +228,34 @@ def save_daily_report(
         connection.commit()
 
 
+def load_daily_report(day: str) -> dict | None:
+    with _connect() as connection:
+        row = connection.execute(
+            """
+            SELECT day, report_markdown, ai_report, keyword_scores_json, created_at
+            FROM daily_reports
+            WHERE day = ?
+            """,
+            (day,),
+        ).fetchone()
+    if row is None:
+        return None
+    try:
+        keyword_scores = json.loads(row["keyword_scores_json"])
+    except json.JSONDecodeError:
+        keyword_scores = {}
+    return {
+        "day": row["day"],
+        "report_markdown": row["report_markdown"],
+        "ai_report": row["ai_report"],
+        "keyword_scores": keyword_scores,
+        "relevance": 0.0,
+        "matched_terms": ["previous same-day run"],
+        "created_at": row["created_at"],
+        "context_role": "previous_same_day_run",
+    }
+
+
 def update_tracked_keyword_weights(
     day: str,
     keyword_scores: list[tuple[str, float]],

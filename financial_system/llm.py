@@ -20,7 +20,10 @@ Rules:
 - Separate facts, interpretation, and risk assessment.
 - Use related historical reports as context, but do not treat old information as today's fact.
 - Use the immediately previous report as continuity context. Repeat only still-important points; skip background that was already explained and is no longer central.
+- If a previous same-day run is provided, treat it as the strongest continuity context.
 - Clearly identify whether today's market action continues or reverses themes from related historical reports.
+- Filter repeated news and stale context. Re-state an already-covered item only when there is a new fact, new price reaction, or changed risk implication.
+- When information overlaps with the previous report, summarize it in one concise sentence instead of repeating the whole explanation.
 - Make the daily report primarily about short-term international political and economic conditions.
 - Treat long-term themes as monitored background. Discuss them in detail only when a monitor alert is provided.
 - Include both upside and downside risks.

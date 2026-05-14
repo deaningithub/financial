@@ -159,6 +159,17 @@ jobs:
                 --oauth-token-scope="https://www.googleapis.com/auth/cloud-platform" \
                 --quiet
             fi
+
+            SCHEDULER_STATE="$(gcloud scheduler jobs describe "${SCHEDULER_JOB_NAME}" \
+              --project="${GCP_PROJECT_ID}" \
+              --location="${GCP_REGION}" \
+              --format="value(state)")"
+            if [ "${SCHEDULER_STATE}" != "ENABLED" ]; then
+              gcloud scheduler jobs resume "${SCHEDULER_JOB_NAME}" \
+                --project="${GCP_PROJECT_ID}" \
+                --location="${GCP_REGION}" \
+                --quiet
+            fi
           done
 
           LEGACY_SCHEDULER_JOB_NAME="${SCHEDULER_JOB_PREFIX}-daily"

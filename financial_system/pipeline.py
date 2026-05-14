@@ -21,6 +21,7 @@ from financial_system.database import (
     save_keyword_scores,
     load_historical_keyword_scores,
     load_monitor_events,
+    load_daily_report,
     load_previous_report,
     load_related_reports,
     load_tracked_keyword_weights,
@@ -200,13 +201,22 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         lookback_days=settings.report_context_lookback_days,
         exclude_days={day},
     )
+    current_day_previous_report = load_daily_report(day)
     previous_report = load_previous_report(
         day,
         lookback_days=settings.report_context_lookback_days,
     )
+    if current_day_previous_report:
+        related_reports = [current_day_previous_report] + [
+            report for report in related_reports if report.get("day") != current_day_previous_report.get("day")
+        ]
     if previous_report:
         related_reports = [previous_report] + [
             report for report in related_reports if report.get("day") != previous_report.get("day")
+        ]
+    if current_day_previous_report and previous_report:
+        related_reports = [current_day_previous_report] + [
+            report for report in related_reports if report.get("context_role") != "previous_same_day_run"
         ]
     news_items = collect_news(
         queries,

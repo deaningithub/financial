@@ -74,7 +74,9 @@ const STATE_HEADERS = [
   'last_event_time',
   'symbol',
   'event_type',
-  'reason'
+  'reason',
+  'severity',
+  'move_abs'
 ];
 
 function setupMonitoringSheets() {
@@ -127,45 +129,45 @@ function runMonitoringCycle() {
     }
 
     const changePct = quote.dailyChangePct;
-    const threshold = Number(row.change_pct_abs || 0);
-    const intradayThreshold = Number(row.intraday_change_pct_abs || 0);
-    const gapThreshold = Number(row.gap_pct_abs || 0);
-    const volumeAbove = Number(row.volume_above || 0);
-    const priceAbove = Number(row.price_above || 0);
-    const priceBelow = Number(row.price_below || 0);
+    const threshold = parseOptionalNumber_(row.change_pct_abs);
+    const intradayThreshold = parseOptionalNumber_(row.intraday_change_pct_abs);
+    const gapThreshold = parseOptionalNumber_(row.gap_pct_abs);
+    const volumeAbove = parseOptionalNumber_(row.volume_above);
+    const priceAbove = parseOptionalNumber_(row.price_above);
+    const priceBelow = parseOptionalNumber_(row.price_below);
 
-    if (threshold > 0 && Number.isFinite(changePct) && Math.abs(changePct) >= threshold) {
-      const severity = severityForMove_(Math.abs(changePct), threshold);
+    if (threshold !== null && threshold > 0 && Number.isFinite(changePct) && Math.abs(changePct) >= threshold) {
+      const severity = severityForMove_(Math.abs(changePct), 'daily_move');
       const title = `${row.name || row.symbol} moved ${changePct.toFixed(2)}%`;
       appendThrottledEvent_(eventsSheet, state, row, quote, 'price_alert', severity, title, '', `abs move >= ${threshold}%`, `${threshold}%`);
     }
 
-    if (intradayThreshold > 0 && Number.isFinite(quote.intradayChangePct) && Math.abs(quote.intradayChangePct) >= intradayThreshold) {
-      const severity = severityForMove_(Math.abs(quote.intradayChangePct), intradayThreshold);
+    if (intradayThreshold !== null && intradayThreshold > 0 && Number.isFinite(quote.intradayChangePct) && Math.abs(quote.intradayChangePct) >= intradayThreshold) {
+      const severity = severityForMove_(Math.abs(quote.intradayChangePct), 'intraday_move');
       const title = `${row.name || row.symbol} intraday move ${quote.intradayChangePct.toFixed(2)}%`;
       appendThrottledEvent_(eventsSheet, state, row, quote, 'intraday_alert', severity, title, '', `intraday abs move >= ${intradayThreshold}%`, `${intradayThreshold}%`);
     }
 
-    if (gapThreshold > 0 && Number.isFinite(quote.gapPct) && Math.abs(quote.gapPct) >= gapThreshold) {
-      const severity = severityForMove_(Math.abs(quote.gapPct), gapThreshold);
+    if (gapThreshold !== null && gapThreshold > 0 && Number.isFinite(quote.gapPct) && Math.abs(quote.gapPct) >= gapThreshold) {
+      const severity = severityForMove_(Math.abs(quote.gapPct), 'intraday_move');
       const title = `${row.name || row.symbol} opening gap ${quote.gapPct.toFixed(2)}%`;
       appendThrottledEvent_(eventsSheet, state, row, quote, 'gap_alert', severity, title, '', `gap abs move >= ${gapThreshold}%`, `${gapThreshold}%`);
     }
 
-    if (volumeAbove > 0 && Number.isFinite(quote.volume) && quote.volume >= volumeAbove) {
+    if (volumeAbove !== null && volumeAbove > 0 && Number.isFinite(quote.volume) && quote.volume >= volumeAbove) {
       const title = `${row.name || row.symbol} volume above ${volumeAbove}`;
       appendThrottledEvent_(eventsSheet, state, row, quote, 'volume_alert', 'medium', title, '', 'volume_above', String(volumeAbove));
     }
 
-    if (priceAbove > 0 && quote.price >= priceAbove) {
+    if (priceAbove !== null && priceAbove > 0 && quote.price >= priceAbove) {
       appendThrottledEvent_(eventsSheet, state, row, quote, 'price_alert', 'medium', `${row.name || row.symbol} crossed above ${priceAbove}`, '', 'price_above', String(priceAbove));
     }
 
-    if (priceBelow > 0 && quote.price <= priceBelow) {
+    if (priceBelow !== null && priceBelow > 0 && quote.price <= priceBelow) {
       appendThrottledEvent_(eventsSheet, state, row, quote, 'price_alert', 'medium', `${row.name || row.symbol} crossed below ${priceBelow}`, '', 'price_below', String(priceBelow));
     }
 
-    if (String(row.paper_signal_enabled).toLowerCase() === 'true' && threshold > 0 && Number.isFinite(changePct) && Math.abs(changePct) >= threshold) {
+    if (String(row.paper_signal_enabled).toLowerCase() === 'true' && threshold !== null && threshold > 0 && Number.isFinite(changePct) && Math.abs(changePct) >= threshold) {
       const signal = changePct > 0 ? 'watch_pullback_entry' : 'watch_reversal_risk';
       const title = `Paper signal for ${row.name || row.symbol}: ${signal}`;
       appendThrottledEvent_(eventsSheet, state, row, quote, 'paper_trade_signal', 'medium', title, signal, 'paper signal only; no live orders', `${threshold}%`);
@@ -294,11 +296,21 @@ function buildSnapshot_(row, quote) {
 }
 
 function appendThrottledEvent_(sheet, state, row, quote, eventType, severity, title, signal, reason, threshold) {
-  const eventKey = `${eventType}|${row.symbol}|${reason}|${threshold}`;
+  const now = new Date();
+  const moveAbs = moveAbsForEvent_(quote, eventType);
+  const direction = directionForEvent_(quote, eventType, reason);
+  const dayKey = Utilities.formatDate(now, 'UTC', 'yyyyMMdd');
+  const eventKey = `${dayKey}|${eventType}|${row.symbol}|${reason}|${direction}`;
   const cooldownMinutes = Number(row.cooldown_minutes || 60);
   const lastEvent = state[eventKey] ? new Date(state[eventKey].last_event_time) : null;
-  const now = new Date();
-  if (lastEvent && cooldownMinutes > 0 && now.getTime() - lastEvent.getTime() < cooldownMinutes * 60 * 1000) {
+  if (state[eventKey]) {
+    const oldSeverityRank = severityRank_(state[eventKey].severity || '');
+    const newSeverityRank = severityRank_(severity);
+    const oldMoveAbs = Number(state[eventKey].move_abs || 0);
+    if (newSeverityRank < oldSeverityRank || (newSeverityRank === oldSeverityRank && moveAbs <= oldMoveAbs)) {
+      return;
+    }
+  } else if (lastEvent && cooldownMinutes > 0 && now.getTime() - lastEvent.getTime() < cooldownMinutes * 60 * 1000) {
     return;
   }
   appendEvent_(sheet, buildEvent_(row, quote, eventType, severity, title, signal, reason, threshold));
@@ -307,7 +319,9 @@ function appendThrottledEvent_(sheet, state, row, quote, eventType, severity, ti
     last_event_time: now.toISOString(),
     symbol: row.symbol,
     event_type: eventType,
-    reason
+    reason,
+    severity,
+    move_abs: String(moveAbs || '')
   };
 }
 
@@ -349,8 +363,54 @@ function writeState_(sheet, state) {
   }
 }
 
-function severityForMove_(moveAbs, threshold) {
-  return moveAbs >= threshold * 2 ? 'high' : 'medium';
+function severityForMove_(moveAbs, eventKind) {
+  if (eventKind === 'intraday_move') {
+    if (moveAbs >= 3.5) return 'critical';
+    if (moveAbs >= 2) return 'high';
+    if (moveAbs >= 1) return 'medium';
+    return 'low';
+  }
+  if (moveAbs >= 5) return 'critical';
+  if (moveAbs >= 3) return 'high';
+  if (moveAbs >= 1.5) return 'medium';
+  return 'low';
+}
+
+function parseOptionalNumber_(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function severityRank_(severity) {
+  const value = String(severity || '').toLowerCase();
+  if (value === 'critical') return 3;
+  if (value === 'high') return 2;
+  if (value === 'medium') return 1;
+  return 0;
+}
+
+function moveAbsForEvent_(quote, eventType) {
+  if (!quote) return 0;
+  if (eventType === 'intraday_alert') return Math.abs(Number(quote.intradayChangePct || 0));
+  if (eventType === 'gap_alert') return Math.abs(Number(quote.gapPct || 0));
+  if (eventType === 'price_alert') return Math.abs(Number(quote.dailyChangePct || 0));
+  return 0;
+}
+
+function directionForEvent_(quote, eventType, reason) {
+  if (!quote) return 'neutral';
+  let value = 0;
+  if (eventType === 'intraday_alert') value = Number(quote.intradayChangePct || 0);
+  if (eventType === 'gap_alert') value = Number(quote.gapPct || 0);
+  if (eventType === 'price_alert') value = Number(quote.dailyChangePct || 0);
+  if (String(reason).indexOf('price_above') >= 0) return 'up';
+  if (String(reason).indexOf('price_below') >= 0) return 'down';
+  if (value > 0) return 'up';
+  if (value < 0) return 'down';
+  return 'neutral';
 }
 
 function formatMaybeNumber_(value, digits) {

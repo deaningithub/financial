@@ -458,6 +458,7 @@ def load_monitor_events(
     limit: int = 20,
 ) -> list[MonitorEvent]:
     cutoff = datetime.utcnow() - timedelta(hours=lookback_hours)
+    raw_limit = max(limit * 5, limit + 50)
     with _connect() as connection:
         rows = connection.execute(
             """
@@ -493,7 +494,7 @@ def load_monitor_events(
                 payload=payload,
             )
         )
-        if len(events) >= limit:
+        if len(events) >= raw_limit:
             break
     return events
 

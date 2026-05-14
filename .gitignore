@@ -10,6 +10,7 @@ data/market_snapshots/*.json
 data/news/*.json
 data/yfinance_cache/
 outputs/*.md
+outputs/**/*.md
 node.msi
 credentials.json
 service-account*.json

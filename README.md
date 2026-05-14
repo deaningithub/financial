@@ -134,6 +134,25 @@ Full instructions are in `README_TAIWAN_STOCK_VALUATION.md`.
 
 For deployment, set `OPENAI_API_KEY` as an environment variable or GitHub Actions secret. The Cloud Run Job workflow passes it into the runtime automatically.
 
+## Decision Intent Analysis
+
+The standalone `decision_intent_analysis/` folder analyzes likely decision intent behind White House, Pentagon, Apple, Nvidia, and U.S. hyperscaler actions.
+It is designed to be split into a separate GitHub repository and reuses this project's daily SQLite database instead of collecting a separate dataset.
+
+```powershell
+cd decision_intent_analysis
+python main.py actors
+python main.py run --date 2026-05-14 --no-ai
+```
+
+Output appears in:
+
+```text
+decision_intent_analysis/outputs/intent_report_YYYY-MM-DD.md
+```
+
+Full instructions are in `decision_intent_analysis/README.md`.
+
 ## Configuration
 
 Edit `config/symbols.json` to track the financial numbers you care about.

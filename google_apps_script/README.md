@@ -23,11 +23,13 @@ npm install -g @google/clasp
 clasp login
 ```
 
+Use the Google account `deanisbetter@gmail.com` for `clasp login`; this account has write access to the linked Apps Script project. `exhalaok@gmail.com` does not currently have Apps Script edit permission for this project.
+
 Push this folder to the linked Apps Script project:
 
 ```powershell
 cd google_apps_script
-clasp push
+clasp push -f
 ```
 
 ## First Run

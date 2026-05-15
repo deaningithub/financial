@@ -32,7 +32,7 @@ from financial_system.database import (
     update_tracked_keyword_weights,
     upsert_tracked_keywords,
 )
-from financial_system.dates import today_string
+from financial_system.dates import execution_run_id, today_string
 from financial_system.dynamic_weights import build_dynamic_condition_queries
 from financial_system.keywords import (
     build_keyword_queries,
@@ -91,6 +91,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
     gcs_db_restore = restore_database_from_gcs()
     init_db()
     day = day or today_string(settings.timezone)
+    run_id = execution_run_id(day, settings.timezone)
 
     daily_keyword_seed = "disabled"
     seeded_rows = load_daily_tracking_keyword_rows(day)
@@ -239,7 +240,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
 
     market_path = DATA_DIR / "market_snapshots" / f"{day}.json"
     news_path = DATA_DIR / "news" / f"{day}.json"
-    report_path = OUTPUT_DIR / f"daily_report_{day}.md"
+    report_path = OUTPUT_DIR / f"daily_report_{run_id}.md"
 
     save_market_snapshots(market_path, snapshots)
     save_news(news_path, news_items)
@@ -279,11 +280,12 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
     save_report(report_path, report)
     save_daily_report(
         day=day,
+        run_id=run_id,
         report_markdown=report,
         ai_report=ai_report,
         keyword_scores=report_keyword_scores,
     )
-    gcs_report_upload = upload_report_to_gcs(report_path, day)
+    gcs_report_upload = upload_report_to_gcs(report_path, run_id)
     gcs_db_backup = backup_database_to_gcs()
     sheet_export = "disabled"
     if settings.google_sheet_export_enabled and settings.google_sheet_id:
@@ -293,6 +295,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
             export_daily_run_to_sheet(
                 spreadsheet_id=settings.google_sheet_id,
                 day=day,
+                run_id=run_id,
                 report_path=str(report_path),
                 report_markdown=report,
                 ai_report=ai_report,
@@ -309,6 +312,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
             sheet_export = f"failed: {exc}"
 
     return {
+        "run_id": run_id,
         "report": str(report_path),
         "market_snapshot": str(market_path),
         "news": str(news_path),

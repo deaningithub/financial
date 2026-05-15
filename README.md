@@ -76,12 +76,12 @@ python main.py run
 
 Output appears in:
 
-- `outputs/daily_report_YYYY-MM-DD.md`
+- `outputs/daily_report_YYYY-MM-DD_YYYYMMDDTHHMMSSffffff_xxxxxxxx.md`
 - `data/market_snapshots/YYYY-MM-DD.json`
 - `data/news/YYYY-MM-DD.json`
 
 The news search includes market anomalies, your weighted notes, historical secondary keywords, and political/company policy keywords. Long-term theme searches are only added when a monitored long-term trend crosses an attention threshold.
-Each generated daily report is also saved into SQLite. Future reports use weighted keyword similarity to load at least three related historical reports as context, falling back to recent reports only when related matches are unavailable.
+Each generated daily report is saved into SQLite with a unique `run_id`, so multiple Cloud Run Job executions on the same report date remain separate records. Future reports use weighted keyword similarity to load at least three related historical reports as context, falling back to recent reports only when related matches are unavailable.
 
 ## Cloud Run Job Schedule
 

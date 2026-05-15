@@ -61,7 +61,7 @@ def backup_database_to_gcs() -> str:
         return f"failed: {exc}"
 
 
-def upload_report_to_gcs(report_path: Path, day: str) -> str:
+def upload_report_to_gcs(report_path: Path, run_id: str) -> str:
     bucket_name, prefix = _bucket_config()
     if not bucket_name:
         return "disabled"
@@ -72,7 +72,7 @@ def upload_report_to_gcs(report_path: Path, day: str) -> str:
         if client is None:
             return "disabled: google-cloud-storage not installed"
 
-        object_name = f"{prefix}/daily_report_{day}.md"
+        object_name = f"{prefix}/daily_report_{run_id}.md"
         bucket = client.bucket(bucket_name)
         bucket.blob(object_name).upload_from_filename(str(report_path), content_type="text/markdown")
         return f"uploaded: gs://{bucket_name}/{object_name}"

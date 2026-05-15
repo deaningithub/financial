@@ -17,6 +17,7 @@ MAX_CELL_CHARS = 45000
 
 SHEETS: dict[str, list[str]] = {
     "DailyReports": [
+        "run_id",
         "day",
         "created_at",
         "report_path",
@@ -133,6 +134,27 @@ def _replace_by_day(
     )
 
 
+def _replace_by_key(
+    service,
+    spreadsheet_id: str,
+    title: str,
+    headers: list[str],
+    key_column: str,
+    key_value: str,
+    new_rows: Iterable[list[object]],
+) -> None:
+    existing = _values(service, spreadsheet_id, title)
+    rows = existing[1:] if existing else []
+    key_index = headers.index(key_column)
+    kept_rows = [row for row in rows if len(row) <= key_index or row[key_index] != key_value]
+    _write_values(
+        service,
+        spreadsheet_id,
+        title,
+        [headers] + kept_rows + [[_clip(value) for value in row] for row in new_rows],
+    )
+
+
 def _replace_all(
     service,
     spreadsheet_id: str,
@@ -187,7 +209,14 @@ def _ensure_sheets(service, spreadsheet_id: str) -> None:
         first_row = _values(service, spreadsheet_id, title)[:1]
         if not first_row or first_row[0][: len(headers)] != headers:
             rows = _values(service, spreadsheet_id, title)
-            _write_values(service, spreadsheet_id, title, [headers] + rows[1:])
+            body_rows = rows[1:]
+            if title == "DailyReports" and first_row and first_row[0] and first_row[0][0] == "day":
+                body_rows = [
+                    [f"{row[0]}_legacy_sheet_{index}", *row]
+                    for index, row in enumerate(body_rows, start=1)
+                    if row
+                ]
+            _write_values(service, spreadsheet_id, title, [headers] + body_rows)
 
 
 def _service():
@@ -199,6 +228,7 @@ def export_daily_run_to_sheet(
     *,
     spreadsheet_id: str,
     day: str,
+    run_id: str,
     report_path: str,
     report_markdown: str,
     ai_report: str | None,
@@ -214,14 +244,16 @@ def export_daily_run_to_sheet(
     _ensure_sheets(service, spreadsheet_id)
     updated_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
 
-    _replace_by_day(
+    _replace_by_key(
         service,
         spreadsheet_id,
         "DailyReports",
         SHEETS["DailyReports"],
-        day,
+        "run_id",
+        run_id,
         [
             [
+                run_id,
                 day,
                 updated_at,
                 report_path,

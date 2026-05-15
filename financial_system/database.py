@@ -59,7 +59,8 @@ CREATE_TABLES_SQL = [
     """,
     """
     CREATE TABLE IF NOT EXISTS daily_reports (
-        day TEXT PRIMARY KEY,
+        run_id TEXT PRIMARY KEY,
+        day TEXT NOT NULL,
         report_markdown TEXT NOT NULL,
         ai_report TEXT,
         keyword_scores_json TEXT NOT NULL,
@@ -105,7 +106,50 @@ def init_db() -> None:
     with _connect() as connection:
         for sql in CREATE_TABLES_SQL:
             connection.execute(sql)
+        _migrate_daily_reports_schema(connection)
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_daily_reports_day_created_at ON daily_reports(day, created_at)"
+        )
         connection.commit()
+
+
+def _migrate_daily_reports_schema(connection: sqlite3.Connection) -> None:
+    columns = connection.execute("PRAGMA table_info(daily_reports)").fetchall()
+    if not columns:
+        return
+    column_names = {row["name"] for row in columns}
+    primary_keys = {row["name"] for row in columns if int(row["pk"] or 0) > 0}
+    if "run_id" in column_names and primary_keys == {"run_id"}:
+        return
+
+    connection.execute("ALTER TABLE daily_reports RENAME TO daily_reports_legacy")
+    connection.execute(
+        """
+        CREATE TABLE daily_reports (
+            run_id TEXT PRIMARY KEY,
+            day TEXT NOT NULL,
+            report_markdown TEXT NOT NULL,
+            ai_report TEXT,
+            keyword_scores_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO daily_reports
+            (run_id, day, report_markdown, ai_report, keyword_scores_json, created_at)
+        SELECT
+            day || '_legacy',
+            day,
+            report_markdown,
+            ai_report,
+            keyword_scores_json,
+            created_at
+        FROM daily_reports_legacy
+        """
+    )
+    connection.execute("DROP TABLE daily_reports_legacy")
 
 
 def save_notes(day: str, raw_notes: str) -> None:
@@ -206,6 +250,7 @@ def load_historical_keyword_scores(
 
 def save_daily_report(
     day: str,
+    run_id: str,
     report_markdown: str,
     ai_report: str | None,
     keyword_scores: dict[str, float],
@@ -213,11 +258,18 @@ def save_daily_report(
     with _connect() as connection:
         connection.execute(
             """
-            INSERT OR REPLACE INTO daily_reports
-                (day, report_markdown, ai_report, keyword_scores_json, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO daily_reports
+                (run_id, day, report_markdown, ai_report, keyword_scores_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(run_id) DO UPDATE SET
+                day = excluded.day,
+                report_markdown = excluded.report_markdown,
+                ai_report = excluded.ai_report,
+                keyword_scores_json = excluded.keyword_scores_json,
+                created_at = excluded.created_at
             """,
             (
+                run_id,
                 day,
                 report_markdown,
                 ai_report,
@@ -232,9 +284,11 @@ def load_daily_report(day: str) -> dict | None:
     with _connect() as connection:
         row = connection.execute(
             """
-            SELECT day, report_markdown, ai_report, keyword_scores_json, created_at
+            SELECT run_id, day, report_markdown, ai_report, keyword_scores_json, created_at
             FROM daily_reports
             WHERE day = ?
+            ORDER BY created_at DESC, run_id DESC
+            LIMIT 1
             """,
             (day,),
         ).fetchone()
@@ -245,6 +299,7 @@ def load_daily_report(day: str) -> dict | None:
     except json.JSONDecodeError:
         keyword_scores = {}
     return {
+        "run_id": row["run_id"],
         "day": row["day"],
         "report_markdown": row["report_markdown"],
         "ai_report": row["ai_report"],
@@ -510,7 +565,7 @@ def load_related_reports(
     with _connect() as connection:
         rows = connection.execute(
             """
-            SELECT day, report_markdown, ai_report, keyword_scores_json, created_at
+            SELECT run_id, day, report_markdown, ai_report, keyword_scores_json, created_at
             FROM daily_reports
             ORDER BY day DESC
             """
@@ -544,6 +599,7 @@ def load_related_reports(
 
         candidates.append(
             {
+                "run_id": row["run_id"],
                 "day": day,
                 "report_markdown": row["report_markdown"],
                 "ai_report": row["ai_report"],
@@ -577,10 +633,10 @@ def load_previous_report(day: str, lookback_days: int = 45) -> dict | None:
     with _connect() as connection:
         rows = connection.execute(
             """
-            SELECT day, report_markdown, ai_report, keyword_scores_json, created_at
+            SELECT run_id, day, report_markdown, ai_report, keyword_scores_json, created_at
             FROM daily_reports
             WHERE day < ?
-            ORDER BY day DESC
+            ORDER BY day DESC, created_at DESC, run_id DESC
             """,
             (day,),
         ).fetchall()
@@ -597,6 +653,7 @@ def load_previous_report(day: str, lookback_days: int = 45) -> dict | None:
         except json.JSONDecodeError:
             historical_terms = {}
         return {
+            "run_id": row["run_id"],
             "day": row["day"],
             "report_markdown": row["report_markdown"],
             "ai_report": row["ai_report"],

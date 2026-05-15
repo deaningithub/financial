@@ -97,6 +97,27 @@
     "five_day_threshold_pct": 8.0,
     "one_month_threshold_pct": 18.0
   },
+  "Taiwan institutional flows": {
+    "keywords": ["三大法人", "外資買賣超", "投信買賣超", "自營商買賣超", "融資融券", "借券賣出", "foreign institutional investors Taiwan"],
+    "symbols": ["^TWII", "0050.TW", "2330.TW", "2454.TW", "2317.TW", "2382.TW", "6669.TW", "2308.TW", "2881.TW", "2882.TW", "2885.TW", "2891.TW"],
+    "daily_threshold_pct": 1.2,
+    "five_day_threshold_pct": 3.5,
+    "one_month_threshold_pct": 9.0
+  },
+  "Taiwan conglomerates and financial groups": {
+    "keywords": ["台灣財團", "集團股", "台塑集團", "遠東集團", "富邦集團", "國泰集團", "中信金控", "鴻海集團", "統一集團", "major Taiwan business groups"],
+    "symbols": ["1101.TW", "1102.TW", "1301.TW", "1303.TW", "1326.TW", "2002.TW", "2207.TW", "2317.TW", "2382.TW", "2881.TW", "2882.TW", "2891.TW", "2912.TW", "3045.TW"],
+    "daily_threshold_pct": 1.8,
+    "five_day_threshold_pct": 5.0,
+    "one_month_threshold_pct": 12.0
+  },
+  "Taiwan price valuation rerating": {
+    "keywords": ["台股估值", "本益比", "股價淨值比", "殖利率", "目標價調升", "EPS forecast revision", "PE rerating", "PB valuation", "target price revision"],
+    "symbols": ["2330.TW", "2454.TW", "2308.TW", "2317.TW", "2382.TW", "6669.TW", "3443.TW", "3711.TW", "3037.TW", "2379.TW", "2345.TW", "2881.TW", "2882.TW", "2885.TW", "5871.TW", "6415.TW"],
+    "daily_threshold_pct": 2.0,
+    "five_day_threshold_pct": 5.5,
+    "one_month_threshold_pct": 13.0
+  },
   "future trend watch": {
     "keywords": ["quantum computing", "spatial computing", "AR glasses", "biotech AI", "synthetic biology", "autonomous driving", "solid state battery", "next generation internet"],
     "symbols": ["IONQ", "RGTI", "QUBT", "QBTS", "AAPL", "META", "ISRG", "DNA", "RXRX", "TSLA", "QS"],

@@ -134,14 +134,14 @@ jobs:
           SOURCE_NEWS_LIMIT: ${{ secrets.SOURCE_NEWS_LIMIT }}
           REPORT_CONTEXT_MIN: ${{ secrets.REPORT_CONTEXT_MIN }}
 
-      - name: Ensure daily schedulers
+      - name: Ensure weekday schedulers
         continue-on-error: true
         run: |
           RUN_URI="https://${GCP_REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${GCP_PROJECT_ID}/jobs/${JOB_NAME}:run"
           declare -A SCHEDULES=(
-            ["${SCHEDULER_JOB_PREFIX}-0845"]="45 8 * * *"
-            ["${SCHEDULER_JOB_PREFIX}-1130"]="30 11 * * *"
-            ["${SCHEDULER_JOB_PREFIX}-1400"]="0 14 * * *"
+            ["${SCHEDULER_JOB_PREFIX}-0845"]="45 8 * * 1-5"
+            ["${SCHEDULER_JOB_PREFIX}-1130"]="30 11 * * 1-5"
+            ["${SCHEDULER_JOB_PREFIX}-1400"]="0 14 * * 1-5"
           )
 
           for SCHEDULER_JOB_NAME in "${!SCHEDULES[@]}"; do

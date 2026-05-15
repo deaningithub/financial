@@ -86,7 +86,7 @@ Each generated daily report is also saved into SQLite. Future reports use weight
 ## Cloud Run Job Schedule
 
 The deployed Cloud Run Job is `financial-system` in `asia-east1`.
-Cloud Scheduler runs it three times per day in the `Asia/Taipei` timezone:
+Cloud Scheduler runs it three times per weekday, Monday through Friday, in the `Asia/Taipei` timezone:
 
 - `08:45`
 - `11:30`

@@ -9,7 +9,19 @@
     "MSFT",
     "GOOGL",
     "TSLA",
-    "META"
+    "META",
+    "^TWII",
+    "0050.TW",
+    "2330.TW",
+    "2454.TW",
+    "2308.TW",
+    "2317.TW",
+    "2382.TW",
+    "6669.TW",
+    "2881.TW",
+    "2882.TW",
+    "2885.TW",
+    "2891.TW"
   ],
   "indices": [
     "^GSPC",
@@ -23,7 +35,17 @@
     "merger",
     "bankruptcy",
     "dividend",
-    "stock split"
+    "stock split",
+    "三大法人",
+    "外資買賣超",
+    "投信買賣超",
+    "自營商買賣超",
+    "台股估值",
+    "本益比",
+    "股價淨值比",
+    "目標價調整",
+    "集團股",
+    "台灣財團"
   ],
   "google_sheets": {
     "service_account_file": "credentials.json",

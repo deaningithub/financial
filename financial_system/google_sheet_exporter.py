@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable
 
-import google.auth
 from googleapiclient.discovery import build
 
+from financial_system.google_auth import ensure_google_credentials
 from financial_system.market import MarketSnapshot
 from financial_system.news import NewsItem
 from financial_system.risk_analyzer import RiskMetrics
@@ -220,7 +220,7 @@ def _ensure_sheets(service, spreadsheet_id: str) -> None:
 
 
 def _service():
-    credentials, _ = google.auth.default(scopes=SCOPES)
+    credentials, _ = ensure_google_credentials(SCOPES)
     return build("sheets", "v4", credentials=credentials, cache_discovery=False)
 
 

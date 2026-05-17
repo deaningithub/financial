@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "ms-python.flake8",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode-remote.remote-containers",
+    "googlecloudtools.cloudcode",
+    "github.vscode-github-actions",
+    "github.vscode-pull-request-github",
+    "eamodio.gitlens",
+    "redhat.vscode-yaml",
+    "ms-vscode.powershell"
+  ]
+}

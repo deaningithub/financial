@@ -1,0 +1,112 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install cloud dependencies",
+      "type": "shell",
+      "command": "pip",
+      "args": ["install", "-r", "requirements-cloud.txt"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Compile Python",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "compileall", "financial_system", "main.py"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run daily pipeline",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "financial_system.cli", "run"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run daily pipeline without AI",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "financial_system.cli", "run", "--no-ai"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build Docker image",
+      "type": "shell",
+      "command": "docker",
+      "args": ["build", "-t", "financial-system:latest", "."],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Deploy Cloud Run Job",
+      "type": "shell",
+      "command": "python",
+      "args": ["deploy_cloud_run.py"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "List Cloud Scheduler jobs",
+      "type": "shell",
+      "command": "gcloud",
+      "args": [
+        "scheduler",
+        "jobs",
+        "list",
+        "--location=asia-east1",
+        "--format=value(name,schedule,timeZone,state)"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

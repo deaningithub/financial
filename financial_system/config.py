@@ -53,6 +53,7 @@ class Settings:
     google_sheet_monitor_url: str | None
     google_sheet_monitor_enabled: bool
     google_sheet_export_enabled: bool
+    google_sheet_state_backend: bool
     google_sheet_id: str | None
     news_locales: list[str]
 
@@ -86,6 +87,7 @@ def load_settings() -> Settings:
         google_sheet_monitor_url=os.getenv("GOOGLE_SHEET_MONITOR_URL") or None,
         google_sheet_monitor_enabled=os.getenv("GOOGLE_SHEET_MONITOR_ENABLED", "true").lower() == "true",
         google_sheet_export_enabled=os.getenv("GOOGLE_SHEET_EXPORT_ENABLED", "true").lower() == "true",
+        google_sheet_state_backend=os.getenv("GOOGLE_SHEET_STATE_BACKEND", "true").lower() == "true",
         google_sheet_id=os.getenv("GOOGLE_SHEET_ID") or None,
         news_locales=[
             locale.strip().upper()

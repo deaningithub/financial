@@ -1,38 +1,112 @@
 {
-  "AI chips": [
-    "AI chips",
+  "AI compute and accelerators": [
+    "AI accelerators",
     "GPU supply chain",
+    "custom AI ASIC",
+    "AI inference chip",
+    "edge AI chip",
+    "AI PC NPU",
+    "AI server motherboard",
+    "liquid cooled AI server"
+  ],
+  "AI memory and advanced packaging": [
     "HBM memory",
+    "HBM4",
     "advanced packaging",
     "CoWoS",
+    "chiplet packaging",
+    "glass substrate",
+    "silicon photonics",
     "data center capex"
+  ],
+  "AI software and applications": [
+    "AI agents",
+    "enterprise AI adoption",
+    "sovereign AI",
+    "multimodal AI",
+    "AI cybersecurity",
+    "AI data platform",
+    "AI inference cost",
+    "model serving"
   ],
   "satellite communications": [
     "satellite communications",
     "low earth orbit satellites",
+    "LEO constellation",
+    "5G NTN",
+    "Direct to Device satellite",
     "Starlink",
-    "satellite supply chain",
-    "space internet"
+    "Project Kuiper",
+    "satellite broadband"
+  ],
+  "satellite supply chain": [
+    "satellite payload",
+    "phased array antenna",
+    "ground station",
+    "satellite bus",
+    "inter-satellite link",
+    "space-grade FPGA",
+    "SAR satellite",
+    "earth observation"
+  ],
+  "optical communications": [
+    "800G optical transceiver",
+    "1.6T optical module",
+    "co-packaged optics",
+    "CPO",
+    "linear drive pluggable optics",
+    "silicon photonics",
+    "data center optical networking",
+    "AI data center interconnect"
   ],
   "robotics and automation": [
     "humanoid robots",
+    "embodied AI",
     "industrial robots",
-    "automation equipment",
+    "cobots",
+    "factory automation",
     "servo motors",
-    "edge AI"
+    "harmonic reducers",
+    "edge AI robotics"
   ],
-  "vehicle technology": [
-    "electric vehicles",
+  "robotics components": [
+    "robot actuator",
+    "joint module",
+    "dexterous hand",
+    "force torque sensor",
+    "machine vision",
+    "motion controller",
+    "robot battery",
+    "robot operating system"
+  ],
+  "energy infrastructure": [
+    "AI data center power",
+    "grid equipment",
+    "power transformer",
+    "switchgear",
+    "microgrid",
+    "battery energy storage",
+    "solar inverter",
+    "renewable power purchase agreement"
+  ],
+  "nuclear and clean power": [
+    "small modular reactor",
+    "nuclear power restart",
+    "uranium supply",
+    "clean hydrogen",
+    "fuel cell",
+    "carbon capture",
+    "geothermal power",
+    "long duration energy storage"
+  ],
+  "future trend watch": [
+    "quantum computing",
+    "spatial computing",
+    "AR glasses",
+    "biotech AI",
+    "synthetic biology",
     "autonomous driving",
-    "automotive semiconductors",
-    "charging infrastructure",
-    "battery supply chain"
-  ],
-  "space exploration and moon landing": [
-    "moon landing program",
-    "lunar base",
-    "space exploration",
-    "rocket launch",
-    "aerospace supply chain"
+    "solid state battery",
+    "next generation internet"
   ]
 }

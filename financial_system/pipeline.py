@@ -88,6 +88,15 @@ def _build_report_keyword_scores(
 def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str, str]:
     ensure_directories()
     settings = load_settings()
+    google_auth_status = "disabled"
+    if settings.google_sheet_state_backend and settings.google_sheet_id:
+        try:
+            from financial_system.google_auth import SHEETS_SCOPES, ensure_google_credentials
+
+            _, project_id = ensure_google_credentials(SHEETS_SCOPES)
+            google_auth_status = f"ok: {project_id or 'default'}"
+        except Exception as exc:
+            raise RuntimeError(f"Google Sheet authentication failed before pipeline execution: {exc}") from exc
     gcs_db_restore = restore_database_from_gcs()
     init_db()
     day = day or today_string(settings.timezone)
@@ -319,6 +328,7 @@ def run_daily_pipeline(day: str | None = None, use_ai: bool = True) -> dict[str,
         "gcs_db_restore": gcs_db_restore,
         "gcs_db_backup": gcs_db_backup,
         "gcs_report_upload": gcs_report_upload,
+        "google_auth": google_auth_status,
         "sheet_monitor_sync": sheet_sync or "disabled",
         "sheet_keyword_seed": sheet_keyword_seed,
         "sheet_export": sheet_export,

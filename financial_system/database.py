@@ -664,3 +664,211 @@ def load_previous_report(day: str, lookback_days: int = 45) -> dict | None:
             "context_role": "previous_report",
         }
     return None
+
+
+_sqlite_init_db = init_db
+_sqlite_save_notes = save_notes
+_sqlite_save_market_snapshots = save_market_snapshots
+_sqlite_save_news = save_news
+_sqlite_save_keyword_scores = save_keyword_scores
+_sqlite_load_historical_keyword_scores = load_historical_keyword_scores
+_sqlite_save_daily_report = save_daily_report
+_sqlite_load_daily_report = load_daily_report
+_sqlite_update_tracked_keyword_weights = update_tracked_keyword_weights
+_sqlite_load_tracked_keyword_weights = load_tracked_keyword_weights
+_sqlite_load_tracked_keywords = load_tracked_keywords
+_sqlite_upsert_tracked_keywords = upsert_tracked_keywords
+_sqlite_save_risk_metrics = save_risk_metrics
+_sqlite_save_monitor_event = save_monitor_event
+_sqlite_save_monitor_events = save_monitor_events
+_sqlite_load_monitor_events = load_monitor_events
+_sqlite_load_related_reports = load_related_reports
+_sqlite_load_previous_report = load_previous_report
+
+
+def _sheet_backend_config() -> tuple[bool, str | None]:
+    import os
+
+    from dotenv import load_dotenv
+
+    from financial_system.config import ROOT
+
+    load_dotenv(ROOT / ".env")
+    spreadsheet_id = os.getenv("GOOGLE_SHEET_ID") or None
+    enabled = os.getenv("GOOGLE_SHEET_STATE_BACKEND", "true").lower() == "true"
+    return bool(enabled and spreadsheet_id), spreadsheet_id
+
+
+def init_db() -> None:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import init_db as init_sheet_db
+
+        init_sheet_db(spreadsheet_id)
+        return
+    _sqlite_init_db()
+
+
+def save_notes(day: str, raw_notes: str) -> None:
+    enabled, _ = _sheet_backend_config()
+    if enabled:
+        return
+    _sqlite_save_notes(day, raw_notes)
+
+
+def save_market_snapshots(day: str, snapshots: list[MarketSnapshot]) -> None:
+    enabled, _ = _sheet_backend_config()
+    if enabled:
+        return
+    _sqlite_save_market_snapshots(day, snapshots)
+
+
+def save_news(day: str, news_items: list[NewsItem]) -> None:
+    enabled, _ = _sheet_backend_config()
+    if enabled:
+        return
+    _sqlite_save_news(day, news_items)
+
+
+def save_keyword_scores(day: str, keyword_scores: list[tuple[str, float]]) -> None:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import save_keyword_scores as save_sheet_keyword_scores
+
+        save_sheet_keyword_scores(spreadsheet_id, day, keyword_scores)
+        return
+    _sqlite_save_keyword_scores(day, keyword_scores)
+
+
+def load_historical_keyword_scores(
+    max_days: int = 14,
+    decay: float = 0.85,
+    min_score: float = 1.0,
+    exclude_days: set[str] | None = None,
+) -> dict[str, float]:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import load_historical_keyword_scores as load_sheet_scores
+
+        return load_sheet_scores(spreadsheet_id, max_days, decay, min_score, exclude_days)
+    return _sqlite_load_historical_keyword_scores(max_days, decay, min_score, exclude_days)
+
+
+def save_daily_report(
+    day: str,
+    run_id: str,
+    report_markdown: str,
+    ai_report: str | None,
+    keyword_scores: dict[str, float],
+) -> None:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import save_daily_report as save_sheet_daily_report
+
+        save_sheet_daily_report(spreadsheet_id, day, run_id, report_markdown, ai_report, keyword_scores)
+        return
+    _sqlite_save_daily_report(day, run_id, report_markdown, ai_report, keyword_scores)
+
+
+def load_daily_report(day: str) -> dict | None:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import load_daily_report as load_sheet_daily_report
+
+        return load_sheet_daily_report(spreadsheet_id, day)
+    return _sqlite_load_daily_report(day)
+
+
+def update_tracked_keyword_weights(
+    day: str,
+    keyword_scores: list[tuple[str, float]],
+    decay: float = 0.85,
+    min_weight: float = 0.25,
+    max_weight: float = 25.0,
+) -> None:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import update_tracked_keyword_weights as update_sheet_weights
+
+        update_sheet_weights(spreadsheet_id, day, keyword_scores, decay, min_weight, max_weight)
+        return
+    _sqlite_update_tracked_keyword_weights(day, keyword_scores, decay, min_weight, max_weight)
+
+
+def load_tracked_keyword_weights(limit: int = 20, min_weight: float = 1.0) -> dict[str, float]:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import load_tracked_keyword_weights as load_sheet_weights
+
+        return load_sheet_weights(spreadsheet_id, limit, min_weight)
+    return _sqlite_load_tracked_keyword_weights(limit, min_weight)
+
+
+def load_tracked_keywords(limit: int = 30) -> list[dict]:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import load_tracked_keywords as load_sheet_keywords
+
+        return load_sheet_keywords(spreadsheet_id, limit)
+    return _sqlite_load_tracked_keywords(limit)
+
+
+def upsert_tracked_keywords(rows: list[dict]) -> int:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import upsert_tracked_keywords as upsert_sheet_keywords
+
+        return upsert_sheet_keywords(spreadsheet_id, rows)
+    return _sqlite_upsert_tracked_keywords(rows)
+
+
+def save_risk_metrics(day: str, metrics: list[RiskMetrics]) -> None:
+    enabled, _ = _sheet_backend_config()
+    if enabled:
+        return
+    _sqlite_save_risk_metrics(day, metrics)
+
+
+def save_monitor_event(event: MonitorEvent) -> None:
+    save_monitor_events([event])
+
+
+def save_monitor_events(events: list[MonitorEvent]) -> int:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import save_monitor_events as save_sheet_monitor_events
+
+        return save_sheet_monitor_events(spreadsheet_id, events)
+    return _sqlite_save_monitor_events(events)
+
+
+def load_monitor_events(lookback_hours: int = 36, limit: int = 20) -> list[MonitorEvent]:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import load_monitor_events as load_sheet_monitor_events
+
+        return load_sheet_monitor_events(spreadsheet_id, lookback_hours, limit)
+    return _sqlite_load_monitor_events(lookback_hours, limit)
+
+
+def load_related_reports(
+    keyword_scores: dict[str, float],
+    min_reports: int = 3,
+    lookback_days: int = 45,
+    exclude_days: set[str] | None = None,
+) -> list[dict]:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import load_related_reports as load_sheet_related_reports
+
+        return load_sheet_related_reports(spreadsheet_id, keyword_scores, min_reports, lookback_days, exclude_days)
+    return _sqlite_load_related_reports(keyword_scores, min_reports, lookback_days, exclude_days)
+
+
+def load_previous_report(day: str, lookback_days: int = 45) -> dict | None:
+    enabled, spreadsheet_id = _sheet_backend_config()
+    if enabled and spreadsheet_id:
+        from financial_system.google_sheet_database import load_previous_report as load_sheet_previous_report
+
+        return load_sheet_previous_report(spreadsheet_id, day, lookback_days)
+    return _sqlite_load_previous_report(day, lookback_days)

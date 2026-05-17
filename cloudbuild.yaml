@@ -1,0 +1,34 @@
+steps:
+  # 第 1 步：建立容器映像
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/financial-system:$SHORT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/financial-system:latest'
+      - '.'
+
+  # 第 2 步：推送到 Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/financial-system:$SHORT_SHA'
+
+  # 第 3 步：部署到 Cloud Run
+  - name: 'gcr.io/cloud-builders/gke-deploy'
+    args:
+      - run
+      - --filename=./cloud-run-config/
+      - --image=gcr.io/$PROJECT_ID/financial-system:$SHORT_SHA
+      - --location=asia-east1
+      - --kubeconfig=/dev/null
+
+images:
+  - 'gcr.io/$PROJECT_ID/financial-system:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/financial-system:latest'
+
+options:
+  machineType: 'N1_HIGHCPU_8'
+
+timeout: '1800s'

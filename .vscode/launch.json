@@ -1,0 +1,55 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current file",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Python: Daily pipeline",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "args": ["run"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "DATA_DIR": "${workspaceFolder}/data",
+        "OUTPUT_DIR": "${workspaceFolder}/outputs"
+      }
+    },
+    {
+      "name": "Python: Daily pipeline without AI",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "args": ["run", "--no-ai"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "DATA_DIR": "${workspaceFolder}/data",
+        "OUTPUT_DIR": "${workspaceFolder}/outputs"
+      }
+    },
+    {
+      "name": "Python: Legacy system smoke test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/test_system.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    }
+  ]
+}

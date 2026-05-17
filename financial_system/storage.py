@@ -6,6 +6,10 @@ from pathlib import Path
 from financial_system.config import DB_PATH
 
 
+def _sheet_state_enabled() -> bool:
+    return os.getenv("GOOGLE_SHEET_STATE_BACKEND", "true").lower() == "true" and bool(os.getenv("GOOGLE_SHEET_ID"))
+
+
 def _bucket_config() -> tuple[str | None, str]:
     bucket_name = os.getenv("GCS_BUCKET_NAME") or None
     prefix = os.getenv("GCS_REPORT_PREFIX", "daily_reports/").strip("/")
@@ -21,6 +25,8 @@ def _storage_client():
 
 
 def restore_database_from_gcs() -> str:
+    if _sheet_state_enabled():
+        return "disabled: google-sheet-state-backend"
     bucket_name, prefix = _bucket_config()
     if not bucket_name:
         return "disabled"
@@ -43,6 +49,8 @@ def restore_database_from_gcs() -> str:
 
 
 def backup_database_to_gcs() -> str:
+    if _sheet_state_enabled():
+        return "disabled: google-sheet-state-backend"
     bucket_name, prefix = _bucket_config()
     if not bucket_name:
         return "disabled"

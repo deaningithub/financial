@@ -2,6 +2,8 @@
 
 This project turns your daily market notes, market numbers, and important news into a repeatable financial intelligence report.
 
+For a file-by-file code necessity review, see `PROJECT_CODE_AUDIT.md`.
+
 It is not only "search the internet." The workflow is:
 
 1. You add important news or keywords you care about.
@@ -81,15 +83,15 @@ Output appears in:
 - `data/news/YYYY-MM-DD.json`
 
 The news search includes market anomalies, your weighted notes, historical secondary keywords, and political/company policy keywords. Long-term theme searches are only added when a monitored long-term trend crosses an attention threshold.
-Each generated daily report is saved into SQLite with a unique `run_id`, so multiple Cloud Run Job executions on the same report date remain separate records. Future reports use weighted keyword similarity to load at least three related historical reports as context, falling back to recent reports only when related matches are unavailable.
+Each generated daily report is saved to Google Sheets with a unique `run_id`, so multiple Cloud Run Job executions on the same report date remain separate records. The default runtime state backend is Google Sheets (`GOOGLE_SHEET_STATE_BACKEND=true`), and the daily pipeline refreshes Google credentials before reading or writing sheet data.
 
 ## Cloud Run Job Schedule
 
 The deployed Cloud Run Job is `financial-system` in `asia-east1`.
-Cloud Scheduler runs it three times per weekday, Monday through Friday, in the `Asia/Taipei` timezone:
+Cloud Scheduler runs it three times every day, including Saturday and Sunday, in the `Asia/Taipei` timezone:
 
-- `08:45`
-- `11:30`
+- `08:30`
+- `11:00`
 - `14:00`
 
 ## Useful Commands
@@ -136,22 +138,8 @@ For deployment, set `OPENAI_API_KEY` as an environment variable or GitHub Action
 
 ## Decision Intent Analysis
 
-The standalone `decision_intent_analysis/` folder analyzes likely decision intent behind White House, Pentagon, Apple, Nvidia, and U.S. hyperscaler actions.
-It is designed to be split into a separate GitHub repository and reuses this project's daily SQLite database instead of collecting a separate dataset.
-
-```powershell
-cd decision_intent_analysis
-python main.py actors
-python main.py run --date 2026-05-14 --no-ai
-```
-
-Output appears in:
-
-```text
-decision_intent_analysis/outputs/intent_report_YYYY-MM-DD.md
-```
-
-Full instructions are in `decision_intent_analysis/README.md`.
+Decision intent analysis has been split into a separate system outside this repository to avoid mixing daily financial reporting with strategic intent hypothesis tracking.
+If needed, the external system can still read this project's SQLite database by setting `FINANCIAL_DB_PATH` to `D:\financial\data\financial_data.db`.
 
 ## Configuration
 
@@ -189,18 +177,24 @@ Phase 2 analysis features:
 - Dynamic condition queries react to volatility, oil, dollar, yield, and regional index moves.
 - AI reports receive correlation results so they can discuss synchronized moves and divergences across markets.
 
-SQLite bridge for an external monitoring project:
+Legacy SQLite bridge for an external monitoring project:
 
 - This project does not run real-time monitoring.
-- External systems can write alert-style events into the `monitor_events` table in `data/financial_data.db`.
+- Daily Cloud Run executions use Google Sheets for state when `GOOGLE_SHEET_STATE_BACKEND=true`.
+- The local SQLite bridge is retained only for local/legacy workflows that explicitly disable the Sheet backend.
+- External systems can write alert-style events into the `monitor_events` table in `data/financial_data.db` only when that legacy mode is enabled.
 - The daily pipeline reads recent events and includes them in the report as external monitor context.
 - Use `python main.py monitor-events` to inspect recent bridge events.
 - Use `python main.py monitor-events --add-sample sample-1 --symbol NVDA --title "Sample volatility alert"` to test the bridge.
 - Use `python main.py monitor-events --sync-sheet` to import events from the configured Google Sheet.
 
-Google Sheet bridge:
+Google Sheet bridge and state backend:
 
 - Set `GOOGLE_SHEET_MONITOR_URL` to the monitor sheet URL.
+- Set `GOOGLE_SHEET_ID` to the workbook used for reports, keyword weights, keyword trends, and monitor event state.
+- Keep `GOOGLE_SHEET_STATE_BACKEND=true` to avoid using the local SQLite state database for daily runs.
+- On Cloud Run, share the Google Sheet with the runtime service account, currently `financial-runner@dean-finance-report-2026.iam.gserviceaccount.com`.
+- Locally, run `gcloud auth application-default login --scopes=https://www.googleapis.com/auth/spreadsheets` before the first sheet-backed run. Each pipeline execution refreshes the token before continuing.
 - The configured sheet must be readable as CSV by this Python process. The simplest setup is sharing the sheet as "Anyone with the link can view" or publishing the `MonitorEvents` tab.
 - The daily pipeline automatically imports the sheet before loading recent monitor events.
 - A Google Apps Script template is included at `google_apps_script/realtime_monitor_trader.gs`.

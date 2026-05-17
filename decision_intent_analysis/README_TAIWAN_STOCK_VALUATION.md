@@ -1,6 +1,6 @@
 # Taiwan Stock Valuation Workflow
 
-This workflow keeps Taiwan stock research in local SQLite first.
+This workflow was split out of the daily financial report project. It keeps Taiwan stock research in local SQLite first.
 
 ```text
 SQLite = source of truth
@@ -14,13 +14,19 @@ The database file is ignored by git:
 data/taiwan_stock_valuation.db
 ```
 
+Run commands from this folder:
+
+```powershell
+cd decision_intent_analysis
+```
+
 ## Initialize
 
 Create the schema and seed the starter Taiwan stock list:
 
 ```powershell
-python main.py taiwan-stocks init
-python main.py taiwan-stocks list
+python main.py init
+python main.py list
 ```
 
 Seeded stocks:
@@ -55,15 +61,15 @@ stock_id,trade_date,open_price,high_price,low_price,close_price,volume,market_ca
 Import:
 
 ```powershell
-python main.py taiwan-stocks import-financial-csv --path data\tw_financials.csv
-python main.py taiwan-stocks import-price-csv --path data\tw_prices.csv
+python main.py import-financial-csv --path data\tw_financials.csv
+python main.py import-price-csv --path data\tw_prices.csv
 ```
 
 You can also enter one row manually:
 
 ```powershell
-python main.py taiwan-stocks add-financial --stock-id 2409 --year 2025 --quarter 4 --revenue 61000 --net-income 1800 --eps 0.45 --equity 115000 --gross-margin 11.5 --operating-margin 4.1 --net-margin 3.0
-python main.py taiwan-stocks add-price --stock-id 2409 --trade-date 2026-05-11 --close-price 18.5 --market-cap 178000
+python main.py add-financial --stock-id 2409 --year 2025 --quarter 4 --revenue 61000 --net-income 1800 --eps 0.45 --equity 115000 --gross-margin 11.5 --operating-margin 4.1 --net-margin 3.0
+python main.py add-price --stock-id 2409 --trade-date 2026-05-11 --close-price 18.5 --market-cap 178000
 ```
 
 ## Calculate Valuation
@@ -71,7 +77,7 @@ python main.py taiwan-stocks add-price --stock-id 2409 --trade-date 2026-05-11 -
 Calculate PE, PB, PS, ROE, growth, and first-pass fair value:
 
 ```powershell
-python main.py taiwan-stocks calc-valuation --stock-id 2409 --calc-date 2026-05-11
+python main.py calc-valuation --stock-id 2409 --calc-date 2026-05-11
 ```
 
 The result is stored in `valuation_metrics`.
@@ -92,7 +98,7 @@ OPENAI_MODEL
 Then run:
 
 ```powershell
-python main.py taiwan-stocks run-research --stock-id 2409 --report-date 2026-05-11
+python main.py run-research --stock-id 2409 --report-date 2026-05-11
 ```
 
 This runs five database-backed agents:
@@ -114,7 +120,7 @@ outputs/taiwan_stock_2409_2026-05-11.md
 For an offline deterministic run without OpenAI:
 
 ```powershell
-python main.py taiwan-stocks run-research --stock-id 2409 --report-date 2026-05-11 --no-ai
+python main.py run-research --stock-id 2409 --report-date 2026-05-11 --no-ai
 ```
 
 ## Read Reports
@@ -122,31 +128,31 @@ python main.py taiwan-stocks run-research --stock-id 2409 --report-date 2026-05-
 Read the latest final report from SQLite:
 
 ```powershell
-python main.py taiwan-stocks show-report --stock-id 2409
+python main.py show-report --stock-id 2409
 ```
 
 Read a specific report date:
 
 ```powershell
-python main.py taiwan-stocks show-report --stock-id 2409 --report-date 2026-05-11
+python main.py show-report --stock-id 2409 --report-date 2026-05-11
 ```
 
 Show only the rating and one-line summary:
 
 ```powershell
-python main.py taiwan-stocks show-report --stock-id 2409 --summary
+python main.py show-report --stock-id 2409 --summary
 ```
 
 Read the five research rounds:
 
 ```powershell
-python main.py taiwan-stocks show-rounds --stock-id 2409
+python main.py show-rounds --stock-id 2409
 ```
 
 Read the detailed round facts, assumptions, and risks:
 
 ```powershell
-python main.py taiwan-stocks show-rounds --stock-id 2409 --details
+python main.py show-rounds --stock-id 2409 --details
 ```
 
 You can also open the Markdown file directly from `outputs/`.
@@ -154,13 +160,13 @@ You can also open the Markdown file directly from `outputs/`.
 ## Typical Full Flow
 
 ```powershell
-python main.py taiwan-stocks init
-python main.py taiwan-stocks import-financial-csv --path data\tw_financials.csv
-python main.py taiwan-stocks import-price-csv --path data\tw_prices.csv
-python main.py taiwan-stocks calc-valuation --stock-id 2409 --calc-date 2026-05-11
-python main.py taiwan-stocks run-research --stock-id 2409 --report-date 2026-05-11
-python main.py taiwan-stocks show-report --stock-id 2409 --report-date 2026-05-11 --summary
-python main.py taiwan-stocks show-rounds --stock-id 2409 --details
+python main.py init
+python main.py import-financial-csv --path data\tw_financials.csv
+python main.py import-price-csv --path data\tw_prices.csv
+python main.py calc-valuation --stock-id 2409 --calc-date 2026-05-11
+python main.py run-research --stock-id 2409 --report-date 2026-05-11
+python main.py show-report --stock-id 2409 --report-date 2026-05-11 --summary
+python main.py show-rounds --stock-id 2409 --details
 ```
 
 ## Notes

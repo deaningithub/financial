@@ -114,32 +114,12 @@ Run without OpenAI, keeping the market/news collection:
 python main.py run --no-ai
 ```
 
-## Taiwan Stock Valuation
-
-Taiwan stock valuation research uses a separate local SQLite database:
-
-```text
-data/taiwan_stock_valuation.db
-```
-
-Initialize, calculate valuation, run the five-round LLM research workflow, and read reports:
-
-```powershell
-python main.py taiwan-stocks init
-python main.py taiwan-stocks calc-valuation --stock-id 2409 --calc-date 2026-05-11
-python main.py taiwan-stocks run-research --stock-id 2409 --report-date 2026-05-11
-python main.py taiwan-stocks show-report --stock-id 2409 --summary
-python main.py taiwan-stocks show-rounds --stock-id 2409 --details
-```
-
-Full instructions are in `README_TAIWAN_STOCK_VALUATION.md`.
-
 For deployment, set `OPENAI_API_KEY` as an environment variable or GitHub Actions secret. The Cloud Run Job workflow passes it into the runtime automatically.
 
 ## Decision Intent Analysis
 
 Decision intent analysis has been split into a separate system outside this repository to avoid mixing daily financial reporting with strategic intent hypothesis tracking.
-If needed, the external system can still read this project's SQLite database by setting `FINANCIAL_DB_PATH` to `D:\financial\data\financial_data.db`.
+The detached Taiwan stock valuation research workflow has also moved under `decision_intent_analysis/` for future development outside this daily report runtime.
 
 ## Configuration
 

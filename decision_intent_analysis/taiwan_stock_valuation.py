@@ -2,13 +2,29 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
-from financial_system.config import OUTPUT_DIR, TAIWAN_STOCK_VALUATION_DB_PATH, load_settings
+from dotenv import load_dotenv
+
+
+ROOT = Path(__file__).resolve().parent
+DATA_DIR = Path(os.getenv("DATA_DIR", ROOT / "data"))
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", ROOT / "outputs"))
+TAIWAN_STOCK_VALUATION_DB_PATH = DATA_DIR / "taiwan_stock_valuation.db"
+
+
+def load_settings() -> SimpleNamespace:
+    load_dotenv(ROOT / ".env")
+    return SimpleNamespace(
+        openai_api_key=os.getenv("OPENAI_API_KEY") or None,
+        openai_model=os.getenv("OPENAI_MODEL", "gpt-5.5"),
+    )
 
 
 TAIWAN_STOCK_SCHEMA_SQL = """

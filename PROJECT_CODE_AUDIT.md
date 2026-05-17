@@ -25,7 +25,7 @@ Cloud execution is handled by the Cloud Run Job workflow in `.github/workflows/d
 
 | Path | Necessity | Notes |
 | --- | --- | --- |
-| `financial_system/cli.py` | Required | Defines supported commands: daily run, symbols, keyword inspection, risk, monitor events, and Taiwan stock legacy workflow. |
+| `financial_system/cli.py` | Required | Defines supported commands: daily run, symbols, keyword inspection, risk, and monitor events. |
 | `financial_system/pipeline.py` | Required | Main daily report orchestration. Now validates Google credentials before sheet-backed runs. |
 | `financial_system/config.py` | Required | Central settings loader and config file paths. Includes `GOOGLE_SHEET_STATE_BACKEND`. |
 | `financial_system/google_auth.py` | Required | Refreshes Google ADC credentials before Sheet access. Local fallback opens `gcloud auth application-default login`. |
@@ -59,7 +59,6 @@ Cloud execution is handled by the Cloud Run Job workflow in `.github/workflows/d
 | `financial_system/realtime_monitor.py` | Optional legacy | Real-time monitor prototype. Current production report imports monitor events from Google Sheets instead. |
 | `financial_system/trend_predictor.py` | Optional legacy | Trend prediction prototype used by older orchestrator/tests, not the daily report path. |
 | `financial_system/db_cloud.py` | Optional legacy | Cloud SQL/Postgres helper. Current production state backend is Google Sheets. |
-| `financial_system/taiwan_stock_valuation.py` | Optional local research tool | Provides the `taiwan-stocks` CLI commands. It uses a separate SQLite workflow and is not part of the Cloud Run daily report path. Keep only if local Taiwan valuation research remains useful. |
 
 ## Configuration Files
 
@@ -100,7 +99,6 @@ Cloud execution is handled by the Cloud Run Job workflow in `.github/workflows/d
 | `setup-vscode-cloud-run.ps1` | Optional dev helper | VS Code Cloud Run task setup. |
 | `setup_github.py` | Optional setup helper | GitHub setup automation. |
 | `VS_CODE_CLOUD_RUN_README.md` | Optional docs | VS Code/Cloud Run developer setup. |
-| `README_TAIWAN_STOCK_VALUATION.md` | Optional docs | Local Taiwan stock valuation workflow. |
 | `README_ADVANCED.md` | Optional docs | Advanced setup notes. |
 
 ## Root Legacy Scripts
@@ -119,7 +117,9 @@ Cloud execution is handled by the Cloud Run Job workflow in `.github/workflows/d
 
 | Path | Decision | Notes |
 | --- | --- | --- |
-| `decision_intent_analysis/` | Removed from this repo | Split into a separate system to keep daily financial reporting separate from strategic decision-intent analysis. |
+| `decision_intent_analysis/` | Detached workspace | Split away from the daily financial report runtime. The Taiwan stock valuation SQLite workflow now lives here for future separate development. |
+| `financial_system/taiwan_stock_valuation.py` | Removed from main package | Moved to `decision_intent_analysis/taiwan_stock_valuation.py`; no longer imported by the production CLI. |
+| `README_TAIWAN_STOCK_VALUATION.md` | Removed from root docs | Moved to `decision_intent_analysis/README_TAIWAN_STOCK_VALUATION.md`. |
 | `cloudbuild.yaml` | Not primary | Existing file targets an older Cloud Build/GKE-style flow and references infrastructure not used by the current Cloud Run Job workflow. Do not use unless rewritten. |
 | `node.msi` | Excluded | Local installer artifact, ignored by git. |
 | `.env`, `.env.cloud` | Excluded | Local/secret environment files. |
@@ -128,6 +128,7 @@ Cloud execution is handled by the Cloud Run Job workflow in `.github/workflows/d
 ## Current Cleanup Position
 
 - The production daily report path is coherent and centered on Google Sheets.
-- SQLite is still present in code as a fallback compatibility layer and for optional legacy/local tools. It is not used by the Cloud Run daily report path when `GOOGLE_SHEET_STATE_BACKEND=true`.
+- SQLite is still present in code as a fallback compatibility layer only. It is not used by the Cloud Run daily report path when `GOOGLE_SHEET_STATE_BACKEND=true`.
 - The root legacy scripts are not deleted in this cleanup because they are tracked historical tools and removing them would be a larger product decision. Their non-production status is now documented here.
+- The Taiwan stock valuation SQLite workflow is no longer part of this project package or CLI; continue it inside `decision_intent_analysis/`.
 - Future cleanup can remove or archive `financial_system/main.py`, `automated_trader.py`, `realtime_monitor.py`, `trend_predictor.py`, and root legacy scripts once the user confirms those experimental workflows are no longer needed.

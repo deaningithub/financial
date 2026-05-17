@@ -22,7 +22,6 @@ NEWS_SOURCES_FILE = CONFIG_DIR / "news_sources.json"
 CORRELATION_PAIRS_FILE = CONFIG_DIR / "correlation_pairs.json"
 DAILY_TRACKING_KEYWORDS_FILE = CONFIG_DIR / "daily_tracking_keywords.json"
 DB_PATH = DATA_DIR / "financial_data.db"
-TAIWAN_STOCK_VALUATION_DB_PATH = DATA_DIR / "taiwan_stock_valuation.db"
 
 
 @dataclass(frozen=True)
